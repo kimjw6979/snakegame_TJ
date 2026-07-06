@@ -302,7 +302,7 @@ snake_game = components.declare_component("snake_v4", path=component_dir)
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("🐍 TJ 꿈틀꿈틀 랭킹전 🕹")
+st.title("🐍 TJ 꿈틀꿈틀 랭 킹 전 🎮")
 st.info("방향키로 조종하세요! 벽이나 몸에 부딪히면 ❤️가 소모됩니다. [Space Bar]나 마우스 클릭으로 시작할 수 있습니다!")
 
 col1, col2 = st.columns([3, 1])
@@ -334,12 +334,12 @@ with col2:
             st.divider()
 
 # -------------------------------------------------------------
-# 🛠️ 관리자 도구 (비밀번호: 0610)
+# 🛠️ 관리자 도구 (비밀번호: 880610)
 # -------------------------------------------------------------
 st.sidebar.title("🛠️ 관리자 도구")
 admin_password = st.sidebar.text_input("관리자 비밀번호를 입력하세요", type="password")
 
-if admin_password == "0610":
+if admin_password == "880610":
     st.sidebar.success("✅ 관리자 인증 완료!")
     if st.sidebar.button("🚨 랭킹 데이터 전체 초기화"):
         if os.path.exists(SCORE_FILE):
