@@ -16,7 +16,7 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 780px; overflow: hidden; }
+        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 800px; overflow: hidden; }
         canvas { background-color: #34495e; border: 3px solid #ecf0f1; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
         .ui-container { display: flex; gap: 20px; margin-bottom: 10px; align-items: center; }
         .setup-container, .restart-container { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center;}
@@ -26,7 +26,7 @@ GAME_HTML = """
         #scoreBoard, #livesBoard { font-size: 22px; font-weight: bold; }
         #livesBoard { color: #ff7675; }
         #itemEffect { font-size: 18px; color: #f1c40f; height: 24px; margin-bottom: 10px; font-weight: bold; }
-        .info-text { font-size: 12px; color: #bdc3c7; margin-top: 5px; text-align: center; }
+        .info-text { font-size: 14px; color: #bdc3c7; margin-top: 10px; text-align: center; }
     </style>
 </head>
 <body>
@@ -46,14 +46,27 @@ GAME_HTML = """
     <div id="itemEffect"></div>
     
     <canvas id="gameCanvas" width="460" height="460"></canvas>
-    <div class="info-text">[Space Bar]를 눌러 게임을 시작하거나 다시 도전할 수 있습니다.</div>
+    <div class="info-text">⌨️ [Space Bar]를 눌러 게임을 시작하거나 다시 도전할 수 있습니다.</div>
 
     <script>
+        // 🌟 [중요 복구] 스트림릿 화면 표시를 위한 통신 코드
         function sendToStreamlit(type, data) {
             const msg = { isStreamlitMessage: true, type: type };
             if (data) Object.assign(msg, data);
             window.parent.postMessage(msg, "*");
         }
+        
+        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 800 }); }
+
+        window.addEventListener("load", function() {
+            sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
+            setHeight();
+        });
+        
+        window.addEventListener("message", function(event) {
+            if (event.data && event.data.type === "streamlit:render") setHeight();
+        });
+        // ----------------------------------------------------
 
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
@@ -80,7 +93,6 @@ GAME_HTML = """
 
         // 시작 버튼 클릭 이벤트
         document.getElementById("startBtn").addEventListener("click", triggerStart);
-        // 다시하기 버튼 클릭 이벤트
         document.getElementById("restartBtn").addEventListener("click", triggerStart);
 
         function triggerStart() {
@@ -231,9 +243,8 @@ GAME_HTML = """
             return head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height; 
         }
 
-        // 키보드 입력 핸들러 (스페이스바 시작 로직 추가)
+        // 스페이스바 입력으로 게임 시작 & 조작
         window.addEventListener("keydown", function(e) {
-            // 1. 게임 시작 전이거나 게임오버 상태일 때 스페이스바(32) 입력 처리
             if (e.keyCode === 32 && !isStarted && !isCountingDown) {
                 e.preventDefault();
                 triggerStart();
@@ -241,7 +252,7 @@ GAME_HTML = """
             }
 
             if (isCountingDown || isGameOver) return;
-            if([37, 38, 39, 40, 32].indexOf(e.keyCode) > -1) e.preventDefault(); // 스페이스바 기본 스크롤 방지
+            if([37, 38, 39, 40, 32].indexOf(e.keyCode) > -1) e.preventDefault(); 
             
             const LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
             if (e.keyCode === LEFT && dx === 0) { dx = -gridSize; dy = 0; }
@@ -281,23 +292,24 @@ def save_score(nickname, score):
         json.dump(scores, f, ensure_ascii=False, indent=4)
 
 # 컴포넌트 폴더 준비
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v3")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v4")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v3", path=component_dir)
+snake_game = components.declare_component("snake_v4", path=component_dir)
 
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("🐍 TJ 꿈틀꿈틀 랭킹전 (Season 3)")
+st.title("🐍 TJ 꿈틀꿈틀 랭킹전 🕹")
 st.info("방향키로 조종하세요! 벽이나 몸에 부딪히면 ❤️가 소모됩니다. [Space Bar]나 마우스 클릭으로 시작할 수 있습니다!")
 
 col1, col2 = st.columns([3, 1])
 
 with col1:
-    result = snake_game()
+    # height 파라미터를 추가하여 안정성 향상
+    result = snake_game(height=820)
     if result:
         nickname = result.get("nickname")
         score = result.get("score")
