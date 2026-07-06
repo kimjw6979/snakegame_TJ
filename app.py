@@ -16,8 +16,11 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 800px; overflow: hidden; }
+        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 850px; overflow: hidden; }
+        .canvas-container { position: relative; width: 550px; height: 550px; }
         canvas { background-color: #34495e; border: 3px solid #ecf0f1; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        /* ☁️ 구름 아이템 암흑 효과 오버레이 */
+        #blindOverlay { position: absolute; top: 3px; left: 3px; width: 550px; height: 550px; background-color: rgba(10, 15, 25, 0.98); display: none; pointer-events: none; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; color: #7f8c8d; }
         .ui-container { display: flex; gap: 20px; margin-bottom: 10px; align-items: center; }
         .setup-container, .restart-container { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center;}
         input { padding: 10px; font-size: 16px; border-radius: 5px; text-align: center; border: 1px solid #bdc3c7;}
@@ -26,7 +29,7 @@ GAME_HTML = """
         #scoreBoard, #livesBoard { font-size: 22px; font-weight: bold; }
         #livesBoard { color: #ff7675; }
         #itemEffect { font-size: 18px; color: #f1c40f; height: 24px; margin-bottom: 10px; font-weight: bold; }
-        .info-text { font-size: 14px; color: #bdc3c7; margin-top: 10px; text-align: center; }
+        .info-text { font-size: 12px; color: #bdc3c7; margin-top: 5px; text-align: center; }
     </style>
 </head>
 <body>
@@ -45,41 +48,33 @@ GAME_HTML = """
     </div>
     <div id="itemEffect"></div>
     
-    <canvas id="gameCanvas" width="460" height="460"></canvas>
-    <div class="info-text">⌨️ [Space Bar]를 눌러 게임을 시작하거나 다시 도전할 수 있습니다.</div>
+    <div class="canvas-container">
+        <canvas id="gameCanvas" width="550" height="550"></canvas>
+        <div id="blindOverlay">👁️ 암흑 상태 (앞이 보이지 않습니다!)</div>
+    </div>
+    <div class="info-text">[Space Bar]를 눌러 게임을 시작하거나 다시 도전할 수 있습니다.</div>
 
     <script>
-        // 🌟 [중요 복구] 스트림릿 화면 표시를 위한 통신 코드
         function sendToStreamlit(type, data) {
             const msg = { isStreamlitMessage: true, type: type };
             if (data) Object.assign(msg, data);
             window.parent.postMessage(msg, "*");
         }
-        
-        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 800 }); }
-
-        window.addEventListener("load", function() {
-            sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
-            setHeight();
-        });
-        
-        window.addEventListener("message", function(event) {
-            if (event.data && event.data.type === "streamlit:render") setHeight();
-        });
-        // ----------------------------------------------------
 
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const gridSize = 20;
         
         let snake, normalFood, hiddenFruit;
-        let dx, dy, score, nickname, gameInterval, lives;
+        let dx, dy, score, nickname, gameInterval, lives, initialLength;
         let isCountingDown = false, isGameOver = false, isStarted = false, currentSpeed = 100;
+        let blindTimeout = null;
 
         function initGame() {
-            // 460 크기에 맞게 중앙 위치 조정 (20의 배수인 220)
-            snake = [{ x: 220, y: 220 }]; dx = 0; dy = -gridSize;
+            // 550 크기에 맞게 중앙 위치 조정 (20의 배수인 260)
+            snake = [{ x: 260, y: 260 }]; dx = 0; dy = -gridSize;
             score = 0; lives = 3; currentSpeed = 100; isGameOver = false;
+            document.getElementById("blindOverlay").style.display = "none";
             updateUI();
             normalFood = generateValidPosition();
             hiddenFruit = { active: false, x: 0, y: 0, type: '' };
@@ -91,7 +86,6 @@ GAME_HTML = """
             document.getElementById("itemEffect").innerText = "";
         }
 
-        // 시작 버튼 클릭 이벤트
         document.getElementById("startBtn").addEventListener("click", triggerStart);
         document.getElementById("restartBtn").addEventListener("click", triggerStart);
 
@@ -133,31 +127,67 @@ GAME_HTML = """
 
         function main() {
             if (checkCollision()) {
-                lives--;
-                updateUI();
-                if (lives <= 0) {
-                    endGame();
-                } else {
-                    resetSnakePosition();
-                }
+                handleDeath();
                 return;
             }
             clearCanvas(); drawNormalFood(); drawHiddenFruit(); advanceSnake(); drawSnake();
         }
 
+        // 💀 죽었을 때 목숨별 점수 차감 및 몸통 단축 처리
+        function handleDeath() {
+            lives--;
+            if (lives === 2) {
+                // 첫 번째 죽음: -30점 감점, 몸통 5개 감소
+                score = Math.max(0, score - 30);
+                reduceSnakeBody(5);
+                alert(`앗! 첫 번째 충돌! (-30점 감점 및 몸통 5칸 축소)`);
+                resetSnakePosition();
+            } else if (lives === 1) {
+                // 두 번째 죽음: -50점 감점, 몸통 5개 감소
+                score = Math.max(0, score - 50);
+                reduceSnakeBody(5);
+                alert(`위험합니다! 두 번째 충돌! (-50점 감점 및 몸통 5칸 축소)`);
+                resetSnakePosition();
+            } else if (lives <= 0) {
+                // 마지막 죽음: -20점 감점 후 게임 종료
+                score = Math.max(0, score - 20);
+                updateUI();
+                endGame();
+            }
+        }
+
+        function reduceSnakeBody(count) {
+            // 몸통이 다 사라져 죽는 현상 방지를 위해 최소 머리(1칸)는 남겨둠
+            if (snake.length > count) {
+                snake = snake.slice(0, snake.length - count);
+            } else {
+                snake = [snake[0]];
+            }
+        }
+
+        function resetSnakePosition() {
+            clearInterval(gameInterval);
+            document.getElementById("blindOverlay").style.display = "none";
+            updateUI();
+            // 부딪힌 자리에서 머리 좌표만 중앙으로 이동하고, 현재 줄어든 몸통 형태 유지
+            const headDiffX = 260 - snake[0].x;
+            const headDiffY = 260 - snake[0].y;
+            snake.forEach(part => {
+                part.x += headDiffX;
+                part.y += headDiffY;
+            });
+            dx = 0; dy = -gridSize;
+            setTimeout(() => { if(!isGameOver) setGameSpeed(currentSpeed); }, 1000);
+        }
+
         function endGame() {
             clearInterval(gameInterval); isGameOver = true; isStarted = false;
+            document.getElementById("blindOverlay").style.display = "none";
             document.getElementById("restartContainer").style.display = "flex";
             alert(`게임 종료! 최종 점수: ${score}점`);
             sendToStreamlit("streamlit:setComponentValue", { 
                 value: { nickname: nickname, score: score, timestamp: Date.now() } 
             });
-        }
-
-        function resetSnakePosition() {
-            clearInterval(gameInterval);
-            snake = [{ x: 220, y: 220 }]; dx = 0; dy = -gridSize;
-            setTimeout(() => { if(!isGameOver) setGameSpeed(currentSpeed); }, 1000);
         }
 
         function clearCanvas() { ctx.fillStyle = "#34495e"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
@@ -193,7 +223,12 @@ GAME_HTML = """
 
         function applyHiddenFruitEffect(type) {
             const effectDisplay = document.getElementById("itemEffect");
-            if (type === 'bonus') {
+            if (type === 'blind') {
+                effectDisplay.innerText = "☁️ 구름! 2초간 눈앞이 캄캄해집니다!"; effectDisplay.style.color = "#7f8c8d";
+                document.getElementById("blindOverlay").style.display = "flex";
+                if(blindTimeout) clearTimeout(blindTimeout);
+                blindTimeout = setTimeout(() => { document.getElementById("blindOverlay").style.display = "none"; effectDisplay.innerText = ""; }, 2000);
+            } else if (type === 'bonus') {
                 score += 50; effectDisplay.innerText = "🍎 보너스 +50점!"; effectDisplay.style.color = "#f1c40f";
             } else if (type === 'slow') {
                 effectDisplay.innerText = "🐢 바나나! 느릿느릿~ (5초)"; effectDisplay.style.color = "#3498db";
@@ -209,7 +244,7 @@ GAME_HTML = """
                 score += 100; effectDisplay.innerText = "🍓 딸기! 슈퍼 보너스 +100점!"; effectDisplay.style.color = "#ff7675";
             }
             document.getElementById("currentScore").innerText = score;
-            setTimeout(() => { if(!['slow','fast'].includes(type)) effectDisplay.innerText = ""; }, 2000);
+            setTimeout(() => { if(!['slow','fast','blind'].includes(type)) effectDisplay.innerText = ""; }, 2000);
         }
 
         function spawnHiddenFruit() {
@@ -217,10 +252,12 @@ GAME_HTML = """
             let pos = generateValidPosition();
             hiddenFruit.x = pos.x; hiddenFruit.y = pos.y;
             const rand = Math.random();
-            if (rand < 0.3) { hiddenFruit.emoji = '🍎'; hiddenFruit.type = 'bonus'; }
-            else if (rand < 0.5) { hiddenFruit.emoji = '🍌'; hiddenFruit.type = 'slow'; }
+            // 구름 아이템(blind) 확률 배정
+            if (rand < 0.2) { hiddenFruit.emoji = '☁️'; hiddenFruit.type = 'blind'; }
+            else if (rand < 0.4) { hiddenFruit.emoji = '🍎'; hiddenFruit.type = 'bonus'; }
+            else if (rand < 0.55) { hiddenFruit.emoji = '🍌'; hiddenFruit.type = 'slow'; }
             else if (rand < 0.7) { hiddenFruit.emoji = '🍇'; hiddenFruit.type = 'fast'; }
-            else if (rand < 0.9) { hiddenFruit.emoji = '🍊'; hiddenFruit.type = 'penalty'; }
+            else if (rand < 0.85) { hiddenFruit.emoji = '🍊'; hiddenFruit.type = 'penalty'; }
             else { hiddenFruit.emoji = '🍓'; hiddenFruit.type = 'super'; }
             setTimeout(() => { hiddenFruit.active = false; }, 6000);
         }
@@ -243,7 +280,6 @@ GAME_HTML = """
             return head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height; 
         }
 
-        // 스페이스바 입력으로 게임 시작 & 조작
         window.addEventListener("keydown", function(e) {
             if (e.keyCode === 32 && !isStarted && !isCountingDown) {
                 e.preventDefault();
@@ -302,14 +338,14 @@ snake_game = components.declare_component("snake_v4", path=component_dir)
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("🐍 TJ 꿈틀꿈틀 랭 킹 전 🎮")
-st.info("방향키로 조종하세요! 벽이나 몸에 부딪히면 ❤️가 소모됩니다. [Space Bar]나 마우스 클릭으로 시작할 수 있습니다!")
+st.title("🐍 TJ 꿈틀꿈틀 랭킹전 🎮")
+st.info("방향키로 조종하세요! 벽이나 몸에 부딪히면 목숨별로 점수가 차감되며 몸통이 5칸 줄어듭니다. 구름(☁️) 아이템을 조심하세요!")
 
 col1, col2 = st.columns([3, 1])
 
 with col1:
-    # height 파라미터를 추가하여 안정성 향상
-    result = snake_game(height=820)
+    # 확장된 해상도에 맞춰 넉넉하게 콤포넌트 출력 높이를 850으로 조정
+    result = snake_game(height=850)
     if result:
         nickname = result.get("nickname")
         score = result.get("score")
