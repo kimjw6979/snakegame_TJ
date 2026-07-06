@@ -173,10 +173,10 @@ GAME_HTML = """
                 score = Math.max(0, score - 30); reduceSnakeBody(5);
                 alert(`앗! 첫 번째 충돌! (-30점 감점 및 몸통 5칸 축소)`); resetSnakePosition();
             } else if (lives === 1) {
-                score = Math.max(0, score - 50); reduceSnakeBody(5);
-                alert(`위험합니다! 두 번째 충돌! (-50점 감점 및 몸통 5칸 축소)`); resetSnakePosition();
+                score = Math.max(0, score - 20); reduceSnakeBody(5);
+                alert(`위험합니다! 두 번째 충돌! (-20점 감점 및 몸통 5칸 축소)`); resetSnakePosition();
             } else if (lives <= 0) {
-                score = Math.max(0, score - 20); updateUI(); endGame();
+                score = Math.max(0, score - 10); updateUI(); endGame();
             }
         }
 
@@ -410,7 +410,7 @@ def save_score(nickname, score):
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("🐍 TJ 꿈틀꿈틀 랭킹전! ")
+st.title("🐍 TJ 꿈틀꿈틀 랭킹전 (Season 8)")
 st.info("방향키 조작! 먹이를 먹을수록 **속도와 먹이 개수**가 증가합니다. ❓**물음표(랜덤 아이템)** 안에는 어떤 효과가 숨어있을까요?")
 
 col1, col2 = st.columns([3, 1])
@@ -432,20 +432,28 @@ with col1:
 with col2:
     st.subheader("🏆 실시간 TOP 10")
     scores = load_scores()
+    
     if not scores:
         st.write("첫 기록을 남겨보세요!")
     else:
+        # 🌟 리스트 간격을 대폭 줄이기 위해 HTML/CSS로 랭킹 보드 생성
+        board_html = "<div style='display: flex; flex-direction: column; gap: 8px;'>"
         for i, s in enumerate(scores):
             medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}위"
             
-            # 🌟 1등 유저 이름 옆에 달성 날짜/시간 추가 표기
-            if i == 0 and "date" in s:
-                st.markdown(f"**{medal} | {s['nickname']}** 👑 *(달성: {s['date']})*")
-            else:
-                st.markdown(f"**{medal} | {s['nickname']}**")
-                
-            st.caption(f"Score: {s['score']} pts")
-            st.divider()
+            # 1등 유저 옆 달성일 표시 (스타일 적용)
+            date_str = f" <span style='font-size: 12px; font-weight: normal; color: #888;'>👑 (달성: {s.get('date', '알수없음')})</span>" if i == 0 and "date" in s else ""
+            
+            board_html += f"""
+            <div style='border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 8px;'>
+                <div style='font-weight: bold; font-size: 16px; margin-bottom: 2px;'>{medal} | {s['nickname']}{date_str}</div>
+                <div style='font-size: 13px; color: gray;'>Score: {s['score']} pts</div>
+            </div>
+            """
+        board_html += "</div>"
+        
+        # HTML 렌더링
+        st.markdown(board_html, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
 # 🛠️ 관리자 도구 (비밀번호: 880610)
