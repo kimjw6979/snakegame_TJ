@@ -3,8 +3,8 @@ import streamlit.components.v1 as components
 import json
 import os
 
-st.set_page_config(page_title="온라인 지렁이 게임", page_icon="🐍", layout="wide")
-st.title("🐍 TJ 지렁이 게임 랭킹전!")
+st.set_page_config(page_title="꿈틀꿈틀", page_icon="🐍", layout="wide")
+st.title("🐍 TJ 꿈틀꿈틀 랭킹전!")
 st.write("히든 아이템(과일)을 먹고 최고 점수를 노려보세요!")
 
 # -------------------------------------------------------------
