@@ -2,14 +2,13 @@ import streamlit as st
 import streamlit.components.v1 as components
 import json
 import os
+import time
 
-st.set_page_config(page_title="꿈틀꿈틀", page_icon="🐍", layout="wide")
-st.title("🐍 TJ 꿈틀꿈틀 랭킹전!")
-st.write("히든 아이템(과일)을 먹고 최고 점수를 노려보세요!")
+# 페이지 설정
+st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
 
 # -------------------------------------------------------------
-# 🌟 [오프라인 자체 생성 시스템]
-# 외부 링크(CDN)를 완전히 제거하고, 자체 통신 기능이 내장된 HTML을 파이썬이 직접 만듭니다.
+# 🎮 [HTML/JS 게임 엔진 생성]
 # -------------------------------------------------------------
 GAME_HTML = """
 <!DOCTYPE html>
@@ -17,90 +16,94 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 680px; overflow: hidden; }
+        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 780px; overflow: hidden; }
         canvas { background-color: #34495e; border: 3px solid #ecf0f1; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        .ui-container { display: flex; gap: 20px; margin-bottom: 10px; align-items: center; }
         .setup-container, .restart-container { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center;}
         input { padding: 10px; font-size: 16px; border-radius: 5px; text-align: center; border: 1px solid #bdc3c7;}
         button { padding: 10px 20px; font-size: 16px; font-weight: bold; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; }
         button:hover { background-color: #c0392b; }
-        #scoreBoard { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
-        #itemEffect { font-size: 16px; color: #f1c40f; height: 20px; margin-bottom: 10px; font-weight: bold; }
+        #scoreBoard, #livesBoard { font-size: 22px; font-weight: bold; }
+        #livesBoard { color: #ff7675; }
+        #itemEffect { font-size: 18px; color: #f1c40f; height: 24px; margin-bottom: 10px; font-weight: bold; }
+        .info-text { font-size: 12px; color: #bdc3c7; margin-top: 5px; text-align: center; }
     </style>
 </head>
 <body>
     <div class="setup-container" id="setupContainer">
         <input type="text" id="nicknameInput" placeholder="닉네임 (최대10자)" maxlength="10">
-        <button id="startBtn">게임 시작</button>
+        <button id="startBtn">게임 시작 (Space)</button>
     </div>
 
     <div class="restart-container" id="restartContainer" style="display: none;">
-        <button id="restartBtn" style="background-color: #3498db;">🔄 다시 하기</button>
+        <button id="restartBtn" style="background-color: #3498db;">🔄 다시 도전 (Space)</button>
     </div>
 
-    <div id="scoreBoard">현재 점수: <span id="currentScore">0</span></div>
+    <div class="ui-container">
+        <div id="scoreBoard">점수: <span id="currentScore">0</span></div>
+        <div id="livesBoard">목숨: <span id="heartDisplay">❤️❤️❤️</span></div>
+    </div>
     <div id="itemEffect"></div>
-    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    
+    <canvas id="gameCanvas" width="460" height="460"></canvas>
+    <div class="info-text">[Space Bar]를 눌러 게임을 시작하거나 다시 도전할 수 있습니다.</div>
 
     <script>
-        // 🌟 외부 파일(CDN) 차단 문제 완벽 해결: 스트림릿과 직접 통신하는 자체 함수
         function sendToStreamlit(type, data) {
             const msg = { isStreamlitMessage: true, type: type };
             if (data) Object.assign(msg, data);
             window.parent.postMessage(msg, "*");
         }
-        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 680 }); }
 
-        window.addEventListener("load", function() {
-            sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
-            setHeight();
-        });
-        window.addEventListener("message", function(event) {
-            if (event.data && event.data.type === "streamlit:render") setHeight();
-        });
-
-        // --- 여기서부터 게임 로직 ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const gridSize = 20;
         
         let snake, normalFood, hiddenFruit;
-        let dx, dy, score, nickname, gameInterval;
-        let isCountingDown = false, isGameOver = false, currentSpeed = 100;
+        let dx, dy, score, nickname, gameInterval, lives;
+        let isCountingDown = false, isGameOver = false, isStarted = false, currentSpeed = 100;
 
         function initGame() {
-            snake = [{ x: 200, y: 200 }]; dx = 0; dy = -gridSize;
-            score = 0; currentSpeed = 100; isGameOver = false;
-            document.getElementById("currentScore").innerText = score;
-            document.getElementById("itemEffect").innerText = "";
+            // 460 크기에 맞게 중앙 위치 조정 (20의 배수인 220)
+            snake = [{ x: 220, y: 220 }]; dx = 0; dy = -gridSize;
+            score = 0; lives = 3; currentSpeed = 100; isGameOver = false;
+            updateUI();
             normalFood = generateValidPosition();
             hiddenFruit = { active: false, x: 0, y: 0, type: '' };
         }
 
-        document.getElementById("startBtn").addEventListener("click", function() {
+        function updateUI() {
+            document.getElementById("currentScore").innerText = score;
+            document.getElementById("heartDisplay").innerText = "❤️".repeat(lives);
+            document.getElementById("itemEffect").innerText = "";
+        }
+
+        // 시작 버튼 클릭 이벤트
+        document.getElementById("startBtn").addEventListener("click", triggerStart);
+        // 다시하기 버튼 클릭 이벤트
+        document.getElementById("restartBtn").addEventListener("click", triggerStart);
+
+        function triggerStart() {
             nickname = document.getElementById("nicknameInput").value.trim() || "지렁이";
             document.getElementById("setupContainer").style.display = "none";
-            startGameSequence();
-        });
-
-        document.getElementById("restartBtn").addEventListener("click", function() {
             document.getElementById("restartContainer").style.display = "none";
+            isStarted = true;
             startGameSequence();
-        });
+        }
 
         function startGameSequence() { initGame(); startCountdown(); }
 
         function startCountdown() {
             isCountingDown = true;
-            let count = 3; drawScreenWithText(count);
+            let count = 3; 
             let countInterval = setInterval(() => {
+                drawScreenWithText(count > 0 ? count : "시작!");
                 count--;
-                if (count > 0) drawScreenWithText(count);
-                else if (count === 0) drawScreenWithText("시작!");
-                else {
+                if (count < -1) {
                     clearInterval(countInterval); isCountingDown = false;
                     setGameSpeed(currentSpeed);
                 }
-            }, 1000);
+            }, 800);
         }
 
         function setGameSpeed(speed) {
@@ -111,34 +114,53 @@ GAME_HTML = """
         function drawScreenWithText(text) {
             clearCanvas(); drawNormalFood(); drawSnake();
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "white"; ctx.font = "bold 60px 'Malgun Gothic'";
+            ctx.fillStyle = "white"; ctx.font = "bold 50px 'Malgun Gothic'";
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.fillText(text, canvas.width / 2, canvas.height / 2);
         }
 
         function main() {
-            if (hasGameEnded()) {
-                clearInterval(gameInterval); isGameOver = true;
-                document.getElementById("restartContainer").style.display = "flex";
-                alert(`게임 오버!\\n${nickname}님의 최종 점수: ${score}점\\n랭킹에 자동 등록됩니다!`);
-                
-                // 🌟 자체 통신망을 통해 파이썬으로 랭킹 점수 쏘기!
-                sendToStreamlit("streamlit:setComponentValue", { 
-                    value: { nickname: nickname, score: score, timestamp: Date.now() } 
-                });
+            if (checkCollision()) {
+                lives--;
+                updateUI();
+                if (lives <= 0) {
+                    endGame();
+                } else {
+                    resetSnakePosition();
+                }
                 return;
             }
             clearCanvas(); drawNormalFood(); drawHiddenFruit(); advanceSnake(); drawSnake();
         }
 
+        function endGame() {
+            clearInterval(gameInterval); isGameOver = true; isStarted = false;
+            document.getElementById("restartContainer").style.display = "flex";
+            alert(`게임 종료! 최종 점수: ${score}점`);
+            sendToStreamlit("streamlit:setComponentValue", { 
+                value: { nickname: nickname, score: score, timestamp: Date.now() } 
+            });
+        }
+
+        function resetSnakePosition() {
+            clearInterval(gameInterval);
+            snake = [{ x: 220, y: 220 }]; dx = 0; dy = -gridSize;
+            setTimeout(() => { if(!isGameOver) setGameSpeed(currentSpeed); }, 1000);
+        }
+
         function clearCanvas() { ctx.fillStyle = "#34495e"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
-        function drawSnake() { ctx.fillStyle = "#2ecc71"; ctx.strokeStyle = "#27ae60"; snake.forEach(part => { ctx.fillRect(part.x, part.y, gridSize, gridSize); ctx.strokeRect(part.x, part.y, gridSize, gridSize); }); }
+        function drawSnake() { 
+            snake.forEach((part, index) => { 
+                ctx.fillStyle = (index === 0) ? "#27ae60" : "#2ecc71"; 
+                ctx.fillRect(part.x, part.y, gridSize-1, gridSize-1); 
+            }); 
+        }
         function drawNormalFood() { ctx.fillStyle = "#e74c3c"; ctx.fillRect(normalFood.x, normalFood.y, gridSize, gridSize); }
         
         function drawHiddenFruit() {
             if (!hiddenFruit.active) return;
             ctx.font = "18px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillText(hiddenFruit.emoji, hiddenFruit.x + (gridSize / 2), hiddenFruit.y + (gridSize / 2) + 2);
+            ctx.fillText(hiddenFruit.emoji, hiddenFruit.x + (gridSize / 2), hiddenFruit.y + (gridSize / 2));
         }
         
         function advanceSnake() { 
@@ -151,7 +173,7 @@ GAME_HTML = """
             if (ateNormal) { 
                 score += 10; document.getElementById("currentScore").innerText = score; 
                 normalFood = generateValidPosition(); 
-                if (!hiddenFruit.active && Math.random() < 0.3) spawnHiddenFruit();
+                if (!hiddenFruit.active && Math.random() < 0.4) spawnHiddenFruit();
             } else if (ateHidden) {
                 hiddenFruit.active = false; applyHiddenFruitEffect(hiddenFruit.type);
             } else { snake.pop(); } 
@@ -160,49 +182,68 @@ GAME_HTML = """
         function applyHiddenFruitEffect(type) {
             const effectDisplay = document.getElementById("itemEffect");
             if (type === 'bonus') {
-                score += 50; document.getElementById("currentScore").innerText = score; 
-                effectDisplay.innerText = "🍎 대박! 보너스 50점!"; effectDisplay.style.color = "#f1c40f";
+                score += 50; effectDisplay.innerText = "🍎 보너스 +50점!"; effectDisplay.style.color = "#f1c40f";
             } else if (type === 'slow') {
-                effectDisplay.innerText = "🐢 바나나! 속도가 5초간 느려집니다!"; effectDisplay.style.color = "#3498db";
-                setGameSpeed(180);
-                setTimeout(() => { if(!isGameOver) setGameSpeed(100); effectDisplay.innerText = ""; }, 5000);
+                effectDisplay.innerText = "🐢 바나나! 느릿느릿~ (5초)"; effectDisplay.style.color = "#3498db";
+                setGameSpeed(160);
+                setTimeout(() => { if(!isGameOver) setGameSpeed(currentSpeed); effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'fast') {
-                effectDisplay.innerText = "⚡ 포도! 속도가 5초간 빨라집니다!"; effectDisplay.style.color = "#e74c3c";
+                effectDisplay.innerText = "⚡ 포도! 아주 빠르게! (5초)"; effectDisplay.style.color = "#9b59b6";
                 setGameSpeed(50);
-                setTimeout(() => { if(!isGameOver) setGameSpeed(100); effectDisplay.innerText = ""; }, 5000);
+                setTimeout(() => { if(!isGameOver) setGameSpeed(currentSpeed); effectDisplay.innerText = ""; }, 5000);
+            } else if (type === 'penalty') {
+                score = Math.max(0, score - 30); effectDisplay.innerText = "💀 오렌지! 감점 -30점!"; effectDisplay.style.color = "#e67e22";
+            } else if (type === 'super') {
+                score += 100; effectDisplay.innerText = "🍓 딸기! 슈퍼 보너스 +100점!"; effectDisplay.style.color = "#ff7675";
             }
-            setTimeout(() => { if(type === 'bonus') effectDisplay.innerText = ""; }, 2000);
+            document.getElementById("currentScore").innerText = score;
+            setTimeout(() => { if(!['slow','fast'].includes(type)) effectDisplay.innerText = ""; }, 2000);
         }
 
         function spawnHiddenFruit() {
             hiddenFruit.active = true;
             let pos = generateValidPosition();
             hiddenFruit.x = pos.x; hiddenFruit.y = pos.y;
-            const rand = Math.floor(Math.random() * 3);
-            if (rand === 0) { hiddenFruit.emoji = '🍎'; hiddenFruit.type = 'bonus'; }
-            else if (rand === 1) { hiddenFruit.emoji = '🍌'; hiddenFruit.type = 'slow'; }
-            else { hiddenFruit.emoji = '🍇'; hiddenFruit.type = 'fast'; }
+            const rand = Math.random();
+            if (rand < 0.3) { hiddenFruit.emoji = '🍎'; hiddenFruit.type = 'bonus'; }
+            else if (rand < 0.5) { hiddenFruit.emoji = '🍌'; hiddenFruit.type = 'slow'; }
+            else if (rand < 0.7) { hiddenFruit.emoji = '🍇'; hiddenFruit.type = 'fast'; }
+            else if (rand < 0.9) { hiddenFruit.emoji = '🍊'; hiddenFruit.type = 'penalty'; }
+            else { hiddenFruit.emoji = '🍓'; hiddenFruit.type = 'super'; }
             setTimeout(() => { hiddenFruit.active = false; }, 6000);
         }
         
         function generateValidPosition() {
             let newPos;
             while (true) {
-                newPos = { x: Math.round((Math.random() * (canvas.width - gridSize)) / gridSize) * gridSize, y: Math.round((Math.random() * (canvas.height - gridSize)) / gridSize) * gridSize };
+                newPos = { 
+                    x: Math.floor(Math.random() * (canvas.width/gridSize)) * gridSize, 
+                    y: Math.floor(Math.random() * (canvas.height/gridSize)) * gridSize 
+                };
                 if (!snake.some(part => part.x === newPos.x && part.y === newPos.y)) break;
             }
             return newPos;
         }
         
-        function hasGameEnded() { 
-            for (let i = 4; i < snake.length; i++) { if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) return true; } 
-            return snake[0].x < 0 || snake[0].x >= canvas.width || snake[0].y < 0 || snake[0].y >= canvas.height; 
+        function checkCollision() { 
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            for (let i = 0; i < snake.length; i++) { if (snake[i].x === head.x && snake[i].y === head.y) return true; } 
+            return head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height; 
         }
 
+        // 키보드 입력 핸들러 (스페이스바 시작 로직 추가)
         window.addEventListener("keydown", function(e) {
+            // 1. 게임 시작 전이거나 게임오버 상태일 때 스페이스바(32) 입력 처리
+            if (e.keyCode === 32 && !isStarted && !isCountingDown) {
+                e.preventDefault();
+                triggerStart();
+                return;
+            }
+
             if (isCountingDown || isGameOver) return;
-            if([37, 38, 39, 40].indexOf(e.keyCode) > -1) { e.preventDefault(); }
-            const LEFT = 37, RIGHT = 39, UP = 38, DOWN = 40;
+            if([37, 38, 39, 40, 32].indexOf(e.keyCode) > -1) e.preventDefault(); // 스페이스바 기본 스크롤 방지
+            
+            const LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
             if (e.keyCode === LEFT && dx === 0) { dx = -gridSize; dy = 0; }
             if (e.keyCode === UP && dy === 0) { dx = 0; dy = -gridSize; }
             if (e.keyCode === RIGHT && dx === 0) { dx = gridSize; dy = 0; }
@@ -213,72 +254,88 @@ GAME_HTML = """
 </html>
 """
 
-# 폴더 생성 및 저장
-current_dir = os.path.dirname(os.path.abspath(__file__))
-component_dir = os.path.join(current_dir, "snake_offline_v1")
-os.makedirs(component_dir, exist_ok=True)
-html_path = os.path.join(component_dir, "index.html")
-with open(html_path, "w", encoding="utf-8") as f:
-    f.write(GAME_HTML)
-
-# 오프라인 모드 컴포넌트 선언
-snake_game_component = components.declare_component("snake_offline_v1", path=component_dir)
-
 # -------------------------------------------------------------
-# 랭킹 시스템
+# 랭킹 시스템 및 파일 관리
 # -------------------------------------------------------------
-SCORE_FILE = "scores.json"
+SCORE_FILE = "snake_scores.json"
 
 def load_scores():
     if os.path.exists(SCORE_FILE):
         with open(SCORE_FILE, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except:
-                return []
+            try: return json.load(f)
+            except: return []
     return []
 
 def save_score(nickname, score):
     scores = load_scores()
-    scores.append({"nickname": nickname, "score": score})
+    existing_user = next((item for item in scores if item["nickname"] == nickname), None)
+    
+    if existing_user:
+        if score > existing_user["score"]:
+            existing_user["score"] = score
+    else:
+        scores.append({"nickname": nickname, "score": score})
+    
     scores = sorted(scores, key=lambda x: x["score"], reverse=True)[:10]
     with open(SCORE_FILE, "w", encoding="utf-8") as f:
         json.dump(scores, f, ensure_ascii=False, indent=4)
 
+# 컴포넌트 폴더 준비
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v3")
+os.makedirs(component_dir, exist_ok=True)
+with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
+    f.write(GAME_HTML)
+
+snake_game = components.declare_component("snake_v3", path=component_dir)
+
 # -------------------------------------------------------------
-# 레이아웃 
+# 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-col1, col2 = st.columns([2, 1])
+st.title("🐍 TJ 꿈틀꿈틀 랭킹전 (Season 3)")
+st.info("방향키로 조종하세요! 벽이나 몸에 부딪히면 ❤️가 소모됩니다. [Space Bar]나 마우스 클릭으로 시작할 수 있습니다!")
+
+col1, col2 = st.columns([3, 1])
 
 with col1:
-    st.subheader("🎮 게임 플레이")
-    
-    # 여기서 게임이 무조건 열립니다!
-    game_result = snake_game_component()
-    
-    if game_result:
-        nickname = game_result.get("nickname")
-        score = game_result.get("score")
-        timestamp = game_result.get("timestamp")
+    result = snake_game()
+    if result:
+        nickname = result.get("nickname")
+        score = result.get("score")
+        ts = result.get("timestamp")
         
-        if "last_timestamp" not in st.session_state or st.session_state["last_timestamp"] != timestamp:
+        if "last_ts" not in st.session_state or st.session_state["last_ts"] != ts:
             save_score(nickname, score)
-            st.session_state["last_timestamp"] = timestamp
-            st.toast(f"🎉 {nickname}님의 {score}점 랭킹 등록 완료!")
+            st.session_state["last_ts"] = ts
+            st.success(f"🎉 {nickname}님! {score}점 기록 완료!")
             st.rerun()
 
 with col2:
-    st.subheader("🏆 명예의 전당 (Top 10)")
+    st.subheader("🏆 실시간 TOP 10")
     scores = load_scores()
-    
     if not scores:
-        st.info("아직 기록이 없습니다. 첫 1위의 주인공이 되어보세요!")
+        st.write("첫 기록을 남겨보세요!")
     else:
         for i, s in enumerate(scores):
-            if i == 0: medal = "🥇"
-            elif i == 1: medal = "🥈"
-            elif i == 2: medal = "🥉"
-            else: medal = f"🏅 {i+1}위"
-            
-            st.markdown(f"**{medal} | {s['nickname']}** : {s['score']}점")
+            medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}위"
+            st.markdown(f"**{medal} | {s['nickname']}**")
+            st.caption(f"Score: {s['score']} pts")
             st.divider()
+
+# -------------------------------------------------------------
+# 🛠️ 관리자 도구 (비밀번호: 0610)
+# -------------------------------------------------------------
+st.sidebar.title("🛠️ 관리자 도구")
+admin_password = st.sidebar.text_input("관리자 비밀번호를 입력하세요", type="password")
+
+if admin_password == "0610":
+    st.sidebar.success("✅ 관리자 인증 완료!")
+    if st.sidebar.button("🚨 랭킹 데이터 전체 초기화"):
+        if os.path.exists(SCORE_FILE):
+            os.remove(SCORE_FILE)
+            st.sidebar.success("데이터가 성공적으로 삭제되었습니다.")
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.sidebar.info("삭제할 랭킹 데이터가 없습니다.")
+elif admin_password != "":
+    st.sidebar.error("❌ 비밀번호가 틀렸습니다.")
