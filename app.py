@@ -170,11 +170,11 @@ GAME_HTML = """
         function handleDeath() {
             lives--;
             if (lives === 2) {
-                score = Math.max(0, score - 30); reduceSnakeBody(5);
-                alert(`앗! 첫 번째 충돌! (-30점 감점 및 몸통 5칸 축소)`); resetSnakePosition();
+                score = Math.max(0, score - 10); reduceSnakeBody(1);
+                alert(`앗! 첫 번째 충돌! (-10점 감점 및 몸통 1칸 축소)`); resetSnakePosition();
             } else if (lives === 1) {
-                score = Math.max(0, score - 50); reduceSnakeBody(5);
-                alert(`위험합니다! 두 번째 충돌! (-50점 감점 및 몸통 5칸 축소)`); resetSnakePosition();
+                score = Math.max(0, score - 30); reduceSnakeBody(3);
+                alert(`위험합니다! 두 번째 충돌! (-30점 감점 및 몸통 3칸 축소)`); resetSnakePosition();
             } else if (lives <= 0) {
                 score = Math.max(0, score - 20); updateUI(); endGame();
             }
