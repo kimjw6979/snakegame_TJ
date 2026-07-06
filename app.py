@@ -16,11 +16,11 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 850px; overflow: hidden; }
+        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 700px; overflow: hidden; }
         .canvas-container { position: relative; width: 550px; height: 550px; }
         canvas { background-color: #34495e; border: 3px solid #ecf0f1; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
         /* ☁️ 구름 아이템 암흑 효과 오버레이 */
-        #blindOverlay { position: absolute; top: 3px; left: 3px; width: 550px; height: 550px; background-color: rgba(10, 15, 25, 0.98); display: none; pointer-events: none; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; color: #7f8c8d; }
+        #blindOverlay { position: absolute; top: 3px; left: 3px; width: 550px; height: 550px; background-color: rgba(10, 15, 25, 0.98); display: none; pointer-events: none; justify-content: center; align-items: center; font-size: 26px; font-weight: bold; color: #7f8c8d; }
         .ui-container { display: flex; gap: 20px; margin-bottom: 10px; align-items: center; }
         .setup-container, .restart-container { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center;}
         input { padding: 10px; font-size: 16px; border-radius: 5px; text-align: center; border: 1px solid #bdc3c7;}
@@ -55,6 +55,7 @@ GAME_HTML = """
     <div class="info-text">[Space Bar]를 눌러 게임을 시작하거나 다시 도전할 수 있습니다.</div>
 
     <script>
+        // Streamlit 컴포넌트 통신 함수 보완 (단방향 임베딩 시 사용 가능하도록 처리)
         function sendToStreamlit(type, data) {
             const msg = { isStreamlitMessage: true, type: type };
             if (data) Object.assign(msg, data);
@@ -66,12 +67,11 @@ GAME_HTML = """
         const gridSize = 20;
         
         let snake, normalFood, hiddenFruit;
-        let dx, dy, score, nickname, gameInterval, lives, initialLength;
+        let dx, dy, score, nickname, gameInterval, lives;
         let isCountingDown = false, isGameOver = false, isStarted = false, currentSpeed = 100;
         let blindTimeout = null;
 
         function initGame() {
-            // 550 크기에 맞게 중앙 위치 조정 (20의 배수인 260)
             snake = [{ x: 260, y: 260 }]; dx = 0; dy = -gridSize;
             score = 0; lives = 3; currentSpeed = 100; isGameOver = false;
             document.getElementById("blindOverlay").style.display = "none";
@@ -133,23 +133,19 @@ GAME_HTML = """
             clearCanvas(); drawNormalFood(); drawHiddenFruit(); advanceSnake(); drawSnake();
         }
 
-        // 💀 죽었을 때 목숨별 점수 차감 및 몸통 단축 처리
         function handleDeath() {
             lives--;
             if (lives === 2) {
-                // 첫 번째 죽음: -30점 감점, 몸통 5개 감소
                 score = Math.max(0, score - 30);
                 reduceSnakeBody(5);
                 alert(`앗! 첫 번째 충돌! (-30점 감점 및 몸통 5칸 축소)`);
                 resetSnakePosition();
             } else if (lives === 1) {
-                // 두 번째 죽음: -50점 감점, 몸통 5개 감소
                 score = Math.max(0, score - 50);
                 reduceSnakeBody(5);
                 alert(`위험합니다! 두 번째 충돌! (-50점 감점 및 몸통 5칸 축소)`);
                 resetSnakePosition();
             } else if (lives <= 0) {
-                // 마지막 죽음: -20점 감점 후 게임 종료
                 score = Math.max(0, score - 20);
                 updateUI();
                 endGame();
@@ -157,7 +153,6 @@ GAME_HTML = """
         }
 
         function reduceSnakeBody(count) {
-            // 몸통이 다 사라져 죽는 현상 방지를 위해 최소 머리(1칸)는 남겨둠
             if (snake.length > count) {
                 snake = snake.slice(0, snake.length - count);
             } else {
@@ -169,7 +164,6 @@ GAME_HTML = """
             clearInterval(gameInterval);
             document.getElementById("blindOverlay").style.display = "none";
             updateUI();
-            // 부딪힌 자리에서 머리 좌표만 중앙으로 이동하고, 현재 줄어든 몸통 형태 유지
             const headDiffX = 260 - snake[0].x;
             const headDiffY = 260 - snake[0].y;
             snake.forEach(part => {
@@ -252,7 +246,6 @@ GAME_HTML = """
             let pos = generateValidPosition();
             hiddenFruit.x = pos.x; hiddenFruit.y = pos.y;
             const rand = Math.random();
-            // 구름 아이템(blind) 확률 배정
             if (rand < 0.2) { hiddenFruit.emoji = '☁️'; hiddenFruit.type = 'blind'; }
             else if (rand < 0.4) { hiddenFruit.emoji = '🍎'; hiddenFruit.type = 'bonus'; }
             else if (rand < 0.55) { hiddenFruit.emoji = '🍌'; hiddenFruit.type = 'slow'; }
@@ -294,7 +287,7 @@ GAME_HTML = """
             if (e.keyCode === LEFT && dx === 0) { dx = -gridSize; dy = 0; }
             if (e.keyCode === UP && dy === 0) { dx = 0; dy = -gridSize; }
             if (e.keyCode === RIGHT && dx === 0) { dx = gridSize; dy = 0; }
-            if (e.keyCode === DOWN && dy === 0) { dx = 0; dy = gridSize; }
+            if (e.keyCode === DOWN && dy === 0) { dx = 0; dy = -gridSize; }
         }, false);
     </script>
 </body>
@@ -327,25 +320,19 @@ def save_score(nickname, score):
     with open(SCORE_FILE, "w", encoding="utf-8") as f:
         json.dump(scores, f, ensure_ascii=False, indent=4)
 
-# 컴포넌트 폴더 준비
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v4")
-os.makedirs(component_dir, exist_ok=True)
-with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
-    f.write(GAME_HTML)
-
-snake_game = components.declare_component("snake_v4", path=component_dir)
-
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("🐍 TJ 꿈틀꿈틀 랭킹전 🎮")
+st.title("🐍 TJ 꿈틀꿈틀 랭킹전 (Season 4)")
 st.info("방향키로 조종하세요! 벽이나 몸에 부딪히면 목숨별로 점수가 차감되며 몸통이 5칸 줄어듭니다. 구름(☁️) 아이템을 조심하세요!")
 
 col1, col2 = st.columns([3, 1])
 
 with col1:
-    # 확장된 해상도에 맞춰 넉넉하게 콤포넌트 출력 높이를 850으로 조정
-    result = snake_game(height=850)
+    # 💡 components.html 방식을 활용해 인라인 임베딩하여 경로 에러 완벽 해결
+    result = components.html(GAME_HTML, height=750, scrolling=False)
+    
+    # JavaScript 단방향 결합의 한계로 인해 데이터 교환에 세션 상태 이용
     if result:
         nickname = result.get("nickname")
         score = result.get("score")
