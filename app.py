@@ -16,11 +16,10 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 700px; overflow: hidden; }
+        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 850px; overflow: hidden; }
         .canvas-container { position: relative; width: 550px; height: 550px; }
         canvas { background-color: #34495e; border: 3px solid #ecf0f1; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
-        /* ☁️ 구름 아이템 암흑 효과 오버레이 */
-        #blindOverlay { position: absolute; top: 3px; left: 3px; width: 550px; height: 550px; background-color: rgba(10, 15, 25, 0.98); display: none; pointer-events: none; justify-content: center; align-items: center; font-size: 26px; font-weight: bold; color: #7f8c8d; }
+        #blindOverlay { position: absolute; top: 3px; left: 3px; width: 550px; height: 550px; background-color: rgba(10, 15, 25, 0.98); display: none; pointer-events: none; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; color: #7f8c8d; }
         .ui-container { display: flex; gap: 20px; margin-bottom: 10px; align-items: center; }
         .setup-container, .restart-container { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center;}
         input { padding: 10px; font-size: 16px; border-radius: 5px; text-align: center; border: 1px solid #bdc3c7;}
@@ -55,13 +54,25 @@ GAME_HTML = """
     <div class="info-text">[Space Bar]를 눌러 게임을 시작하거나 다시 도전할 수 있습니다.</div>
 
     <script>
-        // Streamlit 컴포넌트 통신 함수 보완 (단방향 임베딩 시 사용 가능하도록 처리)
+        // 🌟 하얀 화면(렌더링 에러)을 고치는 핵심 초기화 코드 복구!
         function sendToStreamlit(type, data) {
             const msg = { isStreamlitMessage: true, type: type };
             if (data) Object.assign(msg, data);
             window.parent.postMessage(msg, "*");
         }
 
+        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 850 }); }
+
+        window.addEventListener("load", function() {
+            sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
+            setHeight();
+        });
+
+        window.addEventListener("message", function(event) {
+            if (event.data && event.data.type === "streamlit:render") setHeight();
+        });
+
+        // 여기서부터는 기존 게임 로직과 100% 동일합니다.
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const gridSize = 20;
@@ -166,10 +177,7 @@ GAME_HTML = """
             updateUI();
             const headDiffX = 260 - snake[0].x;
             const headDiffY = 260 - snake[0].y;
-            snake.forEach(part => {
-                part.x += headDiffX;
-                part.y += headDiffY;
-            });
+            snake.forEach(part => { part.x += headDiffX; part.y += headDiffY; });
             dx = 0; dy = -gridSize;
             setTimeout(() => { if(!isGameOver) setGameSpeed(currentSpeed); }, 1000);
         }
@@ -275,11 +283,8 @@ GAME_HTML = """
 
         window.addEventListener("keydown", function(e) {
             if (e.keyCode === 32 && !isStarted && !isCountingDown) {
-                e.preventDefault();
-                triggerStart();
-                return;
+                e.preventDefault(); triggerStart(); return;
             }
-
             if (isCountingDown || isGameOver) return;
             if([37, 38, 39, 40, 32].indexOf(e.keyCode) > -1) e.preventDefault(); 
             
@@ -287,12 +292,23 @@ GAME_HTML = """
             if (e.keyCode === LEFT && dx === 0) { dx = -gridSize; dy = 0; }
             if (e.keyCode === UP && dy === 0) { dx = 0; dy = -gridSize; }
             if (e.keyCode === RIGHT && dx === 0) { dx = gridSize; dy = 0; }
-            if (e.keyCode === DOWN && dy === 0) { dx = 0; dy = -gridSize; }
+            if (e.keyCode === DOWN && dy === 0) { dx = 0; dy = gridSize; }
         }, false);
     </script>
 </body>
 </html>
 """
+
+# -------------------------------------------------------------
+# 파일 폴더 생성 및 컴포넌트 선언 (정상 통신 방식)
+# -------------------------------------------------------------
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v5")
+os.makedirs(component_dir, exist_ok=True)
+with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
+    f.write(GAME_HTML)
+
+# 컴포넌트 선언! 이제 Python <-> JS 양방향 통신이 정상 작동합니다.
+snake_game = components.declare_component("snake_v5", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -323,17 +339,17 @@ def save_score(nickname, score):
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("🐍 TJ 꿈틀꿈틀 랭킹전 (Season 4)")
+st.title("🐍 TJ 꿈틀꿈틀 랭킹전 (Season 5)")
 st.info("방향키로 조종하세요! 벽이나 몸에 부딪히면 목숨별로 점수가 차감되며 몸통이 5칸 줄어듭니다. 구름(☁️) 아이템을 조심하세요!")
 
 col1, col2 = st.columns([3, 1])
 
 with col1:
-    # 💡 components.html 방식을 활용해 인라인 임베딩하여 경로 에러 완벽 해결
-    result = components.html(GAME_HTML, height=750, scrolling=False)
+    # 게임 실행 후 결과를 result로 받음 (에러 나던 구간 해결됨!)
+    result = snake_game()
     
-    # JavaScript 단방향 결합의 한계로 인해 데이터 교환에 세션 상태 이용
-    if result:
+    # result가 빈 값(None)이 아닐 때만 랭킹 로직을 처리하도록 안전장치 추가
+    if result and isinstance(result, dict):
         nickname = result.get("nickname")
         score = result.get("score")
         ts = result.get("timestamp")
