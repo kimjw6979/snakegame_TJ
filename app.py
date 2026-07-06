@@ -16,10 +16,14 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 850px; overflow: hidden; }
-        .canvas-container { position: relative; width: 550px; height: 550px; }
+        /* body 높이를 900px로 넉넉하게 잡아 화면이 잘리지 않게 합니다 */
+        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 900px; overflow: hidden; }
+        
+        /* 캔버스와 오버레이 크기를 정확히 600x600으로 강제 설정 */
+        .canvas-container { position: relative; width: 600px; height: 600px; }
         canvas { background-color: #34495e; border: 3px solid #ecf0f1; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
-        #blindOverlay { position: absolute; top: 3px; left: 3px; width: 550px; height: 550px; background-color: rgba(10, 15, 25, 0.98); display: none; pointer-events: none; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; color: #7f8c8d; }
+        #blindOverlay { position: absolute; top: 3px; left: 3px; width: 600px; height: 600px; background-color: rgba(10, 15, 25, 0.98); display: none; pointer-events: none; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; color: #7f8c8d; z-index: 10; }
+        
         .ui-container { display: flex; gap: 20px; margin-bottom: 10px; align-items: center; }
         .setup-container, .restart-container { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center;}
         input { padding: 10px; font-size: 16px; border-radius: 5px; text-align: center; border: 1px solid #bdc3c7;}
@@ -48,20 +52,20 @@ GAME_HTML = """
     <div id="itemEffect"></div>
     
     <div class="canvas-container">
-        <canvas id="gameCanvas" width="550" height="550"></canvas>
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
         <div id="blindOverlay">👁️ 암흑 상태 (앞이 보이지 않습니다!)</div>
     </div>
     <div class="info-text">[Space Bar]를 눌러 게임을 시작하거나 다시 도전할 수 있습니다.</div>
 
     <script>
-        // 🌟 하얀 화면(렌더링 에러)을 고치는 핵심 초기화 코드 복구!
+        // 통신 및 프레임 높이 900 확정
         function sendToStreamlit(type, data) {
             const msg = { isStreamlitMessage: true, type: type };
             if (data) Object.assign(msg, data);
             window.parent.postMessage(msg, "*");
         }
 
-        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 850 }); }
+        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 900 }); }
 
         window.addEventListener("load", function() {
             sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
@@ -72,7 +76,6 @@ GAME_HTML = """
             if (event.data && event.data.type === "streamlit:render") setHeight();
         });
 
-        // 여기서부터는 기존 게임 로직과 100% 동일합니다.
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const gridSize = 20;
@@ -83,7 +86,8 @@ GAME_HTML = """
         let blindTimeout = null;
 
         function initGame() {
-            snake = [{ x: 260, y: 260 }]; dx = 0; dy = -gridSize;
+            // 600x600 크기에 맞게 중앙 좌표(300, 300)부터 시작
+            snake = [{ x: 300, y: 300 }]; dx = 0; dy = -gridSize;
             score = 0; lives = 3; currentSpeed = 100; isGameOver = false;
             document.getElementById("blindOverlay").style.display = "none";
             updateUI();
@@ -175,10 +179,13 @@ GAME_HTML = """
             clearInterval(gameInterval);
             document.getElementById("blindOverlay").style.display = "none";
             updateUI();
-            const headDiffX = 260 - snake[0].x;
-            const headDiffY = 260 - snake[0].y;
+            
+            // 중앙(300, 300) 기준으로 몸통 이동 보정
+            const headDiffX = 300 - snake[0].x;
+            const headDiffY = 300 - snake[0].y;
             snake.forEach(part => { part.x += headDiffX; part.y += headDiffY; });
             dx = 0; dy = -gridSize;
+            
             setTimeout(() => { if(!isGameOver) setGameSpeed(currentSpeed); }, 1000);
         }
 
@@ -300,15 +307,15 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (정상 통신 방식)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지를 위해 v6로 변경)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v5")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v6")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-# 컴포넌트 선언! 이제 Python <-> JS 양방향 통신이 정상 작동합니다.
-snake_game = components.declare_component("snake_v5", path=component_dir)
+# 컴포넌트 선언!
+snake_game = components.declare_component("snake_v6", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -339,13 +346,13 @@ def save_score(nickname, score):
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("🐍 TJ 꿈틀꿈틀 랭킹전 (Season 5)")
+st.title("🐍 TJ 꿈틀꿈틀 랭킹전 🎮")
 st.info("방향키로 조종하세요! 벽이나 몸에 부딪히면 목숨별로 점수가 차감되며 몸통이 5칸 줄어듭니다. 구름(☁️) 아이템을 조심하세요!")
 
 col1, col2 = st.columns([3, 1])
 
 with col1:
-    # 게임 실행 후 결과를 result로 받음 (에러 나던 구간 해결됨!)
+    # 게임 실행 후 결과를 result로 받음 
     result = snake_game()
     
     # result가 빈 값(None)이 아닐 때만 랭킹 로직을 처리하도록 안전장치 추가
