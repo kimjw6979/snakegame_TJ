@@ -75,7 +75,6 @@ GAME_HTML = """
         let dx, dy, score, nickname, gameInterval, lives;
         let isCountingDown = false, isGameOver = false, isStarted = false;
         
-        // 🌟 스피드 및 방향키 제어 변수
         let baseSpeed = 100;
         let speedMod = 1;
         let isReversedControls = false;
@@ -90,9 +89,7 @@ GAME_HTML = """
             document.getElementById("blindOverlay").style.display = "none";
             updateUI();
             
-            // 일반 먹이는 배열로 관리 (시작은 1개)
             normalFoods = [generateValidPosition()];
-            // 히든 아이템은 최대 3개까지 배열로 유지
             hiddenFruits = [];
         }
 
@@ -132,21 +129,16 @@ GAME_HTML = """
             }, 800);
         }
 
-        // 🌟 스피드 통합 제어 함수 (점수에 따른 기본 속도 + 아이템 배속)
         function updateSpeed() {
             if(gameInterval) clearInterval(gameInterval);
             gameInterval = setInterval(main, baseSpeed * speedMod);
         }
 
-        // 🌟 점수에 비례하여 난이도(속도/먹이 수)를 올리는 로직
         function updateGameDifficulty() {
             document.getElementById("currentScore").innerText = score;
-            
-            // 속도 증가: 50점마다 간격을 5ms씩 줄임 (최대 40ms까지)
             baseSpeed = Math.max(40, 100 - Math.floor(score / 50) * 5);
             updateSpeed();
             
-            // 일반 먹이 개수 증가: 100점마다 1개씩 추가 (최대 5개)
             let targetFoodCount = Math.min(5, 1 + Math.floor(score / 100));
             while(normalFoods.length < targetFoodCount) {
                 normalFoods.push(generateValidPosition());
@@ -188,7 +180,7 @@ GAME_HTML = """
         function resetSnakePosition() {
             clearInterval(gameInterval);
             document.getElementById("blindOverlay").style.display = "none";
-            isReversedControls = false; // 죽으면 조작 반전 초기화
+            isReversedControls = false; 
             updateUI();
             
             const headDiffX = 300 - snake[0].x;
@@ -210,23 +202,62 @@ GAME_HTML = """
         }
 
         function clearCanvas() { ctx.fillStyle = "#34495e"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        
+        // 🌟 지렁이 머리와 꼬리를 디테일하게 그리는 로직 🌟
         function drawSnake() { 
             snake.forEach((part, index) => { 
-                // 독버섯 상태일 땐 지렁이 머리 색상이 경고색으로 변함
-                if (index === 0) ctx.fillStyle = isReversedControls ? "#e74c3c" : "#27ae60"; 
+                let isHead = (index === 0);
+                let isTail = (index === snake.length - 1 && snake.length > 1);
+
+                // 색상 결정 (독버섯 상태일 땐 경고색)
+                if (isHead) ctx.fillStyle = isReversedControls ? "#e74c3c" : "#27ae60"; 
                 else ctx.fillStyle = isReversedControls ? "#c0392b" : "#2ecc71";
-                ctx.fillRect(part.x, part.y, gridSize-1, gridSize-1); 
+
+                if (isTail) {
+                    // 꼬리는 약간 작게 그려서 얇아지는 느낌을 줌
+                    let margin = 4;
+                    ctx.fillRect(part.x + margin, part.y + margin, gridSize - (margin*2), gridSize - (margin*2));
+                } else {
+                    // 머리와 일반 몸통
+                    ctx.fillRect(part.x, part.y, gridSize - 1, gridSize - 1); 
+                }
+
+                // 머리에 귀여운 눈과 눈동자 추가 (진행 방향에 따라 눈동자 위치 변경)
+                if (isHead) {
+                    ctx.fillStyle = "white";
+                    let e1x, e1y, e2x, e2y, px, py;
+                    
+                    if (dx > 0) { // 오른쪽 이동
+                        e1x = 14; e1y = 6; e2x = 14; e2y = 14; px = 2; py = 0;
+                    } else if (dx < 0) { // 왼쪽 이동
+                        e1x = 6; e1y = 6; e2x = 6; e2y = 14; px = -2; py = 0;
+                    } else if (dy > 0) { // 아래로 이동
+                        e1x = 6; e1y = 14; e2x = 14; e2y = 14; px = 0; py = 2;
+                    } else { // 위로 이동 (기본값)
+                        e1x = 6; e1y = 6; e2x = 14; e2y = 6; px = 0; py = -2;
+                    }
+                    
+                    // 흰자 그리기
+                    ctx.beginPath(); ctx.arc(part.x + e1x, part.y + e1y, 3.5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(part.x + e2x, part.y + e2y, 3.5, 0, Math.PI*2); ctx.fill();
+                    
+                    // 검은 눈동자 그리기 (진행 방향으로 쏠림)
+                    ctx.fillStyle = "black";
+                    ctx.beginPath(); ctx.arc(part.x + e1x + px, part.y + e1y + py, 1.5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(part.x + e2x + px, part.y + e2y + py, 1.5, 0, Math.PI*2); ctx.fill();
+                }
             }); 
         }
+
         function drawNormalFoods() { 
             ctx.fillStyle = "#e74c3c"; 
             normalFoods.forEach(food => ctx.fillRect(food.x, food.y, gridSize, gridSize)); 
         }
         
         function drawHiddenFruits() {
-            ctx.font = "18px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
             hiddenFruits.forEach(fruit => {
-                ctx.fillText(fruit.emoji, fruit.x + (gridSize / 2), fruit.y + (gridSize / 2));
+                ctx.fillText(fruit.emoji, fruit.x + (gridSize / 2), fruit.y + (gridSize / 2) + 2);
             });
         }
         
@@ -234,17 +265,14 @@ GAME_HTML = """
             const head = { x: snake[0].x + dx, y: snake[0].y + dy }; 
             snake.unshift(head); 
             
-            // 일반 먹이 충돌 체크
             let ateNormalIndex = normalFoods.findIndex(f => f.x === head.x && f.y === head.y);
-            // 아이템 충돌 체크
             let ateHiddenIndex = hiddenFruits.findIndex(f => f.x === head.x && f.y === head.y);
 
             if (ateNormalIndex !== -1) { 
                 score += 10; 
                 normalFoods.splice(ateNormalIndex, 1);
-                updateGameDifficulty(); // 점수에 따른 속도/먹이 증가 업데이트
+                updateGameDifficulty(); 
                 
-                // 아이템은 최대 3개까지 유지되며 스폰 확률 부여
                 if (hiddenFruits.length < 3 && Math.random() < 0.4) spawnHiddenFruit();
             } else if (ateHiddenIndex !== -1) {
                 let fruit = hiddenFruits.splice(ateHiddenIndex, 1)[0];
@@ -262,7 +290,6 @@ GAME_HTML = """
                 if(blindTimeout) clearTimeout(blindTimeout);
                 blindTimeout = setTimeout(() => { document.getElementById("blindOverlay").style.display = "none"; effectDisplay.innerText = ""; }, 2000);
             
-            // 🌟 터널 (이동 방향 즉시 반전)
             } else if (type === 'tunnel') {
                 effectDisplay.innerText = "🌀 터널! 지렁이 방향이 거꾸로 뒤집힙니다!"; effectDisplay.style.color = "#9b59b6";
                 if (snake.length > 1) {
@@ -275,7 +302,6 @@ GAME_HTML = """
                     dx = -dx; dy = -dy;
                 }
             
-            // 🌟 독버섯 (방향키 반전)
             } else if (type === 'reverse') {
                 effectDisplay.innerText = "🍄 독버섯! 5초간 방향키가 반대로 조작됩니다!"; effectDisplay.style.color = "#e67e22";
                 isReversedControls = true;
@@ -298,11 +324,10 @@ GAME_HTML = """
                 score += 100; effectDisplay.innerText = "🍓 딸기! 슈퍼 보너스 +100점!"; effectDisplay.style.color = "#ff7675";
             }
             
-            updateGameDifficulty(); // 점수 변동 시 난이도 즉각 반영
+            updateGameDifficulty(); 
             setTimeout(() => { if(!['slow','fast','blind','reverse'].includes(type)) effectDisplay.innerText = ""; }, 2500);
         }
 
-        // 🌟 수정: 스폰되는 모든 아이템의 이모지를 물음표(❓)로 통일
         function spawnHiddenFruit() {
             let pos = generateValidPosition();
             let fruit = { x: pos.x, y: pos.y, emoji: '❓', type: '', id: Date.now() };
@@ -319,7 +344,6 @@ GAME_HTML = """
             
             hiddenFruits.push(fruit);
             
-            // 스폰된 아이템은 8초 후 자동 소멸
             setTimeout(() => { 
                 hiddenFruits = hiddenFruits.filter(f => f.id !== fruit.id); 
             }, 8000);
@@ -350,7 +374,6 @@ GAME_HTML = """
             
             let LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
             
-            // 🌟 독버섯 조작 반전 활성화 시 매핑 변경
             if (isReversedControls) {
                 LEFT = 39; RIGHT = 37; UP = 40; DOWN = 38;
             }
@@ -366,14 +389,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v8)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v10)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v8")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v10")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v8", path=component_dir)
+snake_game = components.declare_component("snake_v10", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -390,7 +413,6 @@ def load_scores():
 def save_score(nickname, score):
     scores = load_scores()
     
-    # 🌟 한국 시간(KST)을 강제로 계산하여 저장 포맷으로 변환
     kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
     date_str = kst_now.strftime("%Y-%m-%d %H:%M")
     
@@ -399,7 +421,7 @@ def save_score(nickname, score):
     if existing_user:
         if score > existing_user["score"]:
             existing_user["score"] = score
-            existing_user["date"] = date_str  # 신기록 갱신 시 날짜 업데이트
+            existing_user["date"] = date_str  
     else:
         scores.append({"nickname": nickname, "score": score, "date": date_str})
     
@@ -436,15 +458,12 @@ with col2:
     if not scores:
         st.write("첫 기록을 남겨보세요!")
     else:
-        # 🌟 들여쓰기 제거를 위해 줄바꿈 없이 단일 라인 문자열 덧붙임 형식으로 수정
         board_html = "<div style='display: flex; flex-direction: column; gap: 8px;'>"
         for i, s in enumerate(scores):
             medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}위"
             
-            # 1등 유저 옆 달성일 표시
             date_str = f" <span style='font-size: 12px; font-weight: normal; color: #888;'>👑 (달성: {s.get('date', '알수없음')})</span>" if i == 0 and "date" in s else ""
             
-            # 스트림릿 마크다운 렌더링 오류 방지를 위해 코드 블록 안에서 탭(공백)을 완전히 제거
             board_html += "<div style='border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 8px;'>"
             board_html += f"<div style='font-weight: bold; font-size: 16px; margin-bottom: 2px;'>{medal} | {s['nickname']}{date_str}</div>"
             board_html += f"<div style='font-size: 13px; color: gray;'>Score: {s['score']} pts</div>"
@@ -452,7 +471,6 @@ with col2:
             
         board_html += "</div>"
         
-        # HTML 렌더링
         st.markdown(board_html, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
