@@ -30,6 +30,8 @@ GAME_HTML = """
         button:hover { background-color: #c0392b; }
         #scoreBoard, #livesBoard { font-size: 22px; font-weight: bold; }
         #livesBoard { color: #ff7675; }
+        #timerBoard { font-size: 22px; font-weight: bold; color: #e67e22; }
+        
         #itemEffect { font-size: 18px; color: #f1c40f; height: 24px; margin-bottom: 10px; font-weight: bold; }
         .info-text { font-size: 12px; color: #bdc3c7; margin-top: 5px; text-align: center; }
     </style>
@@ -47,6 +49,7 @@ GAME_HTML = """
     <div class="ui-container">
         <div id="scoreBoard">점수: <span id="currentScore">0</span></div>
         <div id="livesBoard">목숨: <span id="heartDisplay">❤️❤️❤️</span></div>
+        <div id="timerBoard">⏳ <span id="foodTimerDisplay">15</span>초</div>
     </div>
     <div id="itemEffect"></div>
     
@@ -78,18 +81,23 @@ GAME_HTML = """
         let baseSpeed = 100;
         let speedMod = 1;
         let isReversedControls = false;
-        
-        // 🌟 애벌레 거대화/축소 모디파이어 변수 추가
         let snakeSizeMod = 1; 
         
         let blindTimeout = null;
         let controlTimeout = null;
         let sizeTimeout = null;
+        
+        let hungerTimer = 15;
+        let hungerInterval = null;
 
         function initGame() {
             snake = [{ x: 300, y: 300 }]; dx = 0; dy = -gridSize;
             score = 0; lives = 3; isGameOver = false;
             baseSpeed = 100; speedMod = 1; isReversedControls = false; snakeSizeMod = 1;
+            
+            hungerTimer = 15;
+            if (hungerInterval) clearInterval(hungerInterval);
+            
             document.getElementById("blindOverlay").style.display = "none";
             updateUI();
             
@@ -100,6 +108,7 @@ GAME_HTML = """
         function updateUI() {
             document.getElementById("currentScore").innerText = score;
             document.getElementById("heartDisplay").innerText = "❤️".repeat(lives);
+            document.getElementById("foodTimerDisplay").innerText = hungerTimer;
             document.getElementById("itemEffect").innerText = "";
         }
 
@@ -129,8 +138,41 @@ GAME_HTML = """
                 if (count < -1) {
                     clearInterval(countInterval); isCountingDown = false;
                     updateSpeed();
+                    startHungerTimer();
                 }
             }, 800);
+        }
+
+        function startHungerTimer() {
+            if (hungerInterval) clearInterval(hungerInterval);
+            hungerTimer = 15;
+            document.getElementById("foodTimerDisplay").innerText = hungerTimer;
+            
+            hungerInterval = setInterval(() => {
+                if (isGameOver || isCountingDown || !isStarted) return;
+                
+                hungerTimer--;
+                document.getElementById("foodTimerDisplay").innerText = hungerTimer;
+                
+                if (hungerTimer <= 0) {
+                    reduceSnakeBody(2);
+                    const effectDisplay = document.getElementById("itemEffect");
+                    effectDisplay.innerText = "⚠️ 아사 위기! 몸통 2칸 감소!"; 
+                    effectDisplay.style.color = "#e74c3c";
+                    
+                    setTimeout(() => { 
+                        if(effectDisplay.innerText.includes("아사")) effectDisplay.innerText = ""; 
+                    }, 2000);
+                    
+                    hungerTimer = 15;
+                    document.getElementById("foodTimerDisplay").innerText = hungerTimer;
+                }
+            }, 1000);
+        }
+
+        function resetHungerTimer() {
+            hungerTimer = 15;
+            document.getElementById("foodTimerDisplay").innerText = hungerTimer;
         }
 
         function updateSpeed() {
@@ -163,16 +205,17 @@ GAME_HTML = """
             clearCanvas(); drawNormalFoods(); drawHiddenFruits(); advanceSnake(); drawSnake();
         }
 
+        // 🌟 수정: 점수 감점 제거 및 몸통 3개 축소 고정
         function handleDeath() {
             lives--;
             if (lives === 2) {
-                score = Math.max(0, score - 10); reduceSnakeBody(1);
-                alert(`앗! 첫 번째 충돌! (-10점 감점 및 몸통 1칸 축소)`); resetSnakePosition();
+                reduceSnakeBody(3);
+                alert(`앗! 첫 번째 충돌! (몸통 3칸 축소)`); resetSnakePosition();
             } else if (lives === 1) {
-                score = Math.max(0, score - 10); reduceSnakeBody(3);
-                alert(`위험합니다! 두 번째 충돌! (-10점 감점 및 몸통 3칸 축소)`); resetSnakePosition();
+                reduceSnakeBody(3);
+                alert(`위험합니다! 두 번째 충돌! (몸통 3칸 축소)`); resetSnakePosition();
             } else if (lives <= 0) {
-                score = Math.max(0, score - 5); updateUI(); endGame();
+                updateUI(); endGame();
             }
         }
 
@@ -183,10 +226,11 @@ GAME_HTML = """
 
         function resetSnakePosition() {
             clearInterval(gameInterval);
+            if(hungerInterval) clearInterval(hungerInterval);
+            
             document.getElementById("blindOverlay").style.display = "none";
             isReversedControls = false; 
             
-            // 🌟 부활 시 효과 초기화
             snakeSizeMod = 1;
             if(sizeTimeout) clearTimeout(sizeTimeout);
             
@@ -197,11 +241,19 @@ GAME_HTML = """
             snake.forEach(part => { part.x += headDiffX; part.y += headDiffY; });
             dx = 0; dy = -gridSize;
             
-            setTimeout(() => { if(!isGameOver) updateSpeed(); }, 1000);
+            setTimeout(() => { 
+                if(!isGameOver) {
+                    updateSpeed(); 
+                    startHungerTimer();
+                }
+            }, 1000);
         }
 
         function endGame() {
-            clearInterval(gameInterval); isGameOver = true; isStarted = false;
+            clearInterval(gameInterval); 
+            if(hungerInterval) clearInterval(hungerInterval); 
+            isGameOver = true; isStarted = false;
+            
             document.getElementById("blindOverlay").style.display = "none";
             document.getElementById("restartContainer").style.display = "flex";
             alert(`게임 종료! 최종 점수: ${score}점`);
@@ -212,7 +264,6 @@ GAME_HTML = """
 
         function clearCanvas() { ctx.fillStyle = "#34495e"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
         
-        // 🌟 지렁이 몸집(SizeMod)에 맞춰 눈 크기와 꼬리가 다이나믹하게 변하는 로직 🌟
         function drawSnake() { 
             snake.forEach((part, index) => { 
                 let isHead = (index === 0);
@@ -288,10 +339,14 @@ GAME_HTML = """
                 normalFoods.splice(ateNormalIndex, 1);
                 updateGameDifficulty(); 
                 
+                resetHungerTimer();
+                
                 if (hiddenFruits.length < 3 && Math.random() < 0.4) spawnHiddenFruit();
             } else if (ateHiddenIndex !== -1) {
                 let fruit = hiddenFruits.splice(ateHiddenIndex, 1)[0];
                 applyHiddenFruitEffect(fruit.type);
+                
+                resetHungerTimer(); 
             } else { 
                 snake.pop(); 
             } 
@@ -323,14 +378,13 @@ GAME_HTML = """
                 if(controlTimeout) clearTimeout(controlTimeout);
                 controlTimeout = setTimeout(() => { isReversedControls = false; effectDisplay.innerText = ""; }, 5000);
                 
-            // 🌟 [NEW] 애벌레 거대화/축소 로직 추가
             } else if (type === 'caterpillar') {
                 if (Math.random() < 0.5) {
                     effectDisplay.innerText = "🐛 왕꿈틀이! 5초간 몸집이 거대해집니다!"; effectDisplay.style.color = "#2ecc71";
-                    snakeSizeMod = 1.6; // 1.6배 뚱뚱해짐
+                    snakeSizeMod = 1.6; 
                 } else {
                     effectDisplay.innerText = "🐛 꼬마 애벌레! 5초간 몸집이 콩알만해집니다!"; effectDisplay.style.color = "#f1c40f";
-                    snakeSizeMod = 0.5; // 절반으로 얇아짐
+                    snakeSizeMod = 0.5; 
                 }
                 if(sizeTimeout) clearTimeout(sizeTimeout);
                 sizeTimeout = setTimeout(() => { snakeSizeMod = 1; effectDisplay.innerText = ""; }, 5000);
@@ -360,11 +414,10 @@ GAME_HTML = """
             let fruit = { x: pos.x, y: pos.y, emoji: '❓', type: '', id: Date.now() };
             const rand = Math.random();
             
-            // 🌟 아이템 스폰 확률 리스트에 '애벌레' 추가
             if (rand < 0.12) { fruit.type = 'blind'; }
             else if (rand < 0.24) { fruit.type = 'tunnel'; }
             else if (rand < 0.36) { fruit.type = 'reverse'; }
-            else if (rand < 0.48) { fruit.type = 'caterpillar'; } // NEW: 애벌레 12% 확률
+            else if (rand < 0.48) { fruit.type = 'caterpillar'; } 
             else if (rand < 0.60) { fruit.type = 'bonus'; }
             else if (rand < 0.70) { fruit.type = 'slow'; }
             else if (rand < 0.80) { fruit.type = 'fast'; }
@@ -418,14 +471,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v11)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v13)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v11")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v13")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v11", path=component_dir)
+snake_game = components.declare_component("snake_v13", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -462,7 +515,7 @@ def save_score(nickname, score):
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
 st.title("🐍 TJ Random Speed Rush 🎮 ")
-st.info("⬅⬆➡ 방향키 조작! 먹이를 먹을수록 **속도와 먹이 개수**가 증가합니다. ❓**물음표(랜덤 아이템)** 안에는 어떤 효과가 숨어있을까요?")
+st.info("⬅⬆➡ 방향키 조작! 먹이를 먹을수록 속도가 빨라집니다. ⏳**15초 내에 밥을 안 먹거나 벽에 부딪히면 몸통이 줄어드니** 서두르세요!")
 
 col1, col2 = st.columns([3, 1])
 
