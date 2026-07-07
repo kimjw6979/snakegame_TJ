@@ -89,6 +89,12 @@ GAME_HTML = """
         
         let hungerTimer = 15;
         let hungerInterval = null;
+        
+        // 🌟 블랙홀(워프 게이트) 관련 변수
+        let warpGate = { active: false, p1: {x: 0, y: 0}, p2: {x: 0, y: 0} };
+        let warpTimeout = null;
+        let warpScheduleTimeout = null;
+        let hitWarpCooldown = 0; // 무한 워프 방지용 쿨다운
 
         function initGame() {
             snake = [{ x: 300, y: 300 }]; dx = 0; dy = -gridSize;
@@ -98,11 +104,19 @@ GAME_HTML = """
             hungerTimer = 15;
             if (hungerInterval) clearInterval(hungerInterval);
             
+            // 블랙홀 초기화
+            if(warpTimeout) clearTimeout(warpTimeout);
+            if(warpScheduleTimeout) clearTimeout(warpScheduleTimeout);
+            warpGate.active = false;
+            hitWarpCooldown = 0;
+            
             document.getElementById("blindOverlay").style.display = "none";
             updateUI();
             
             normalFoods = [generateValidPosition()];
             hiddenFruits = [];
+            
+            scheduleWarpGate();
         }
 
         function updateUI() {
@@ -191,9 +205,39 @@ GAME_HTML = """
             }
             if (normalFoods.length === 0) normalFoods.push(generateValidPosition());
         }
+        
+        // 🌟 블랙홀(워프 게이트) 스케줄 및 스폰 로직
+        function scheduleWarpGate() {
+            warpScheduleTimeout = setTimeout(() => {
+                if(!isGameOver && isStarted) {
+                    // 가장자리 벽에서 나오자마자 죽는 것을 방지하기 위해 안전 구역에 스폰
+                    warpGate.p1 = generateSafePortalPosition();
+                    warpGate.p2 = generateSafePortalPosition();
+                    warpGate.active = true;
+                    
+                    // 10초 뒤에 닫히고 다음 블랙홀 스케줄링
+                    warpTimeout = setTimeout(() => {
+                        warpGate.active = false;
+                        scheduleWarpGate();
+                    }, 10000);
+                }
+            }, Math.random() * 10000 + 10000); // 10~20초 주기로 등장
+        }
+        
+        // 블랙홀은 너무 벽 쪽에 붙지 않게 스폰
+        function generateSafePortalPosition() {
+            let newPos;
+            while (true) {
+                let gx = Math.floor(Math.random() * ((canvas.width/gridSize) - 2)) + 1;
+                let gy = Math.floor(Math.random() * ((canvas.height/gridSize) - 2)) + 1;
+                newPos = { x: gx * gridSize, y: gy * gridSize };
+                if (!snake.some(part => part.x === newPos.x && part.y === newPos.y)) break;
+            }
+            return newPos;
+        }
 
         function drawScreenWithText(text) {
-            clearCanvas(); drawNormalFoods(); drawSnake();
+            clearCanvas(); drawWarpGate(); drawNormalFoods(); drawSnake();
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "white"; ctx.font = "bold 50px 'Malgun Gothic'";
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -202,7 +246,12 @@ GAME_HTML = """
 
         function main() {
             if (checkCollision()) { handleDeath(); return; }
-            clearCanvas(); drawNormalFoods(); drawHiddenFruits(); advanceSnake(); drawSnake();
+            clearCanvas(); 
+            drawWarpGate(); // 블랙홀 그리기
+            drawNormalFoods(); 
+            drawHiddenFruits(); 
+            advanceSnake(); 
+            drawSnake();
         }
 
         function handleDeath() {
@@ -239,6 +288,7 @@ GAME_HTML = """
             const headDiffY = 300 - snake[0].y;
             snake.forEach(part => { part.x += headDiffX; part.y += headDiffY; });
             dx = 0; dy = -gridSize;
+            hitWarpCooldown = 0;
             
             setTimeout(() => { 
                 if(!isGameOver) {
@@ -251,6 +301,9 @@ GAME_HTML = """
         function endGame() {
             clearInterval(gameInterval); 
             if(hungerInterval) clearInterval(hungerInterval); 
+            if(warpTimeout) clearTimeout(warpTimeout);
+            if(warpScheduleTimeout) clearTimeout(warpScheduleTimeout);
+            
             isGameOver = true; isStarted = false;
             
             document.getElementById("blindOverlay").style.display = "none";
@@ -326,29 +379,62 @@ GAME_HTML = """
             });
         }
         
+        function drawWarpGate() {
+            if (!warpGate.active) return;
+            ctx.font = "24px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText("🕳️", warpGate.p1.x + (gridSize / 2), warpGate.p1.y + (gridSize / 2) + 2);
+            ctx.fillText("🕳️", warpGate.p2.x + (gridSize / 2), warpGate.p2.y + (gridSize / 2) + 2);
+        }
+        
         function advanceSnake() { 
-            const head = { x: snake[0].x + dx, y: snake[0].y + dy }; 
+            let head = { x: snake[0].x + dx, y: snake[0].y + dy }; 
+            
+            // 🌟 블랙홀 워프 로직 (머리가 정확히 일치할 때 이동)
+            if (warpGate.active && hitWarpCooldown <= 0) {
+                if (head.x === warpGate.p1.x && head.y === warpGate.p1.y) {
+                    head.x = warpGate.p2.x; head.y = warpGate.p2.y;
+                    hitWarpCooldown = 3; // 무한 이동 방지
+                } else if (head.x === warpGate.p2.x && head.y === warpGate.p2.y) {
+                    head.x = warpGate.p1.x; head.y = warpGate.p1.y;
+                    hitWarpCooldown = 3;
+                }
+            }
+            if (hitWarpCooldown > 0) hitWarpCooldown--;
+            
             snake.unshift(head); 
             
-            let ateNormalIndex = normalFoods.findIndex(f => f.x === head.x && f.y === head.y);
-            let ateHiddenIndex = hiddenFruits.findIndex(f => f.x === head.x && f.y === head.y);
+            // 🌟 왕꿈틀이(거대화) 상태일 경우 판정 범위를 1칸 넓힘 (주변 3x3 싹쓸이 가능)
+            let hitRange = (snakeSizeMod > 1.2) ? gridSize : 0;
+            let ateSomething = false;
 
-            if (ateNormalIndex !== -1) { 
-                score += 10; 
-                normalFoods.splice(ateNormalIndex, 1);
-                updateGameDifficulty(); 
-                
-                resetHungerTimer();
-                
-                if (hiddenFruits.length < 3 && Math.random() < 0.4) spawnHiddenFruit();
-            } else if (ateHiddenIndex !== -1) {
-                let fruit = hiddenFruits.splice(ateHiddenIndex, 1)[0];
-                applyHiddenFruitEffect(fruit.type);
-                
-                resetHungerTimer(); 
-            } else { 
+            // 먹이를 역순으로 순회하며 넓은 범위 싹쓸이 처리
+            for (let i = normalFoods.length - 1; i >= 0; i--) {
+                let f = normalFoods[i];
+                if (Math.abs(f.x - head.x) <= hitRange && Math.abs(f.y - head.y) <= hitRange) {
+                    score += 10;
+                    normalFoods.splice(i, 1);
+                    updateGameDifficulty();
+                    resetHungerTimer();
+                    if (hiddenFruits.length < 3 && Math.random() < 0.4) spawnHiddenFruit();
+                    ateSomething = true;
+                }
+            }
+            
+            // 아이템도 넓은 범위로 싹쓸이
+            for (let i = hiddenFruits.length - 1; i >= 0; i--) {
+                let f = hiddenFruits[i];
+                if (Math.abs(f.x - head.x) <= hitRange && Math.abs(f.y - head.y) <= hitRange) {
+                    let fruit = hiddenFruits.splice(i, 1)[0];
+                    applyHiddenFruitEffect(fruit.type);
+                    resetHungerTimer();
+                    ateSomething = true;
+                }
+            }
+
+            // 아무것도 못 먹었으면 꼬리를 줄여서 길이 유지
+            if (!ateSomething) {
                 snake.pop(); 
-            } 
+            }
         }
 
         function applyHiddenFruitEffect(type) {
@@ -379,7 +465,7 @@ GAME_HTML = """
                 
             } else if (type === 'caterpillar') {
                 if (Math.random() < 0.5) {
-                    effectDisplay.innerText = "🐛 왕꿈틀이! 5초간 몸집이 거대해집니다!"; effectDisplay.style.color = "#2ecc71";
+                    effectDisplay.innerText = "🐛 왕꿈틀이! 주변 먹이를 싹쓸이합니다! (5초)"; effectDisplay.style.color = "#2ecc71";
                     snakeSizeMod = 1.6; 
                 } else {
                     effectDisplay.innerText = "🐛 꼬마 애벌레! 5초간 몸집이 콩알만해집니다!"; effectDisplay.style.color = "#f1c40f";
@@ -470,14 +556,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v15)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v16)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v15")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v16")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v15", path=component_dir)
+snake_game = components.declare_component("snake_v16", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -514,7 +600,7 @@ def save_score(nickname, score):
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
 st.title("🐍 TJ Random Speed Rush 🎮 ")
-st.info(" ⌨️ 방향키 조작! ⏳**15초 내에 밥을 안 먹거나 벽에 부딪히면 몸통이 줄어드니** 서두르세요!")
+st.info("⬅⬆➡ 15초 카운트다운! 맵에 등장하는 **🕳️ 블랙홀(워프 게이트)**을 전략적으로 활용해 보세요!")
 
 col1, col2 = st.columns([3, 1])
 
@@ -541,17 +627,17 @@ with col2:
             st.markdown("""
             * **조작 방법**: 키보드 방향키 (⬅️ ⬆️ ➡️ ⬇️)
             * **게임 시작/부활**: 닉네임 입력 후 `[Space Bar]` 입력
-            * **핵심 룰**: 맵에 등장하는 기본 먹이(빨간 네모)를 먹으면 **+10점**을 획득하며 꼬리가 길어집니다.
             * **난이도 상승 (Speed Rush!)**: 
-              * 점수가 **50점** 오를 때마다 지렁이의 **속도가 점점 빨라집니다.**
+              * 점수가 **50점** 오를 때마다 **속도가 점점 빨라집니다.**
               * 점수가 **100점** 오를 때마다 기본 먹이 개수가 증가합니다. (최대 5개)
             * **목숨(하트) 시스템**: 총 **3개(❤️❤️❤️)**의 목숨이 주어집니다.
               * 충돌 시 점수 감점 없이 **몸통만 3칸 줄어든 채** 중앙에서 부활합니다.
+            * 🕳️ **블랙홀(워프 게이트)**: 맵에 10~20초 주기로 블랙홀 2개가 열립니다. 쏙 들어가면 반대편으로 순간이동합니다.
             """)
             
         with tab2:
             st.markdown("""
-            맵 곳곳에 랜덤으로 등장하는 **물음표(❓) 상자** 안에는 아래 아이템 중 하나가 숨겨져 있습니다.
+            **물음표(❓) 상자** 안에는 아래 아이템 중 하나가 숨겨져 있습니다.
             
             | 아이템 | 효과 설명 |
             | :--- | :--- |
@@ -562,7 +648,7 @@ with col2:
             | ☁️ **구름** | 2초간 눈앞이 캄캄해짐 |
             | 🌀 **터널** | 머리와 꼬리가 뒤바뀌며 **방향 즉시 반전** |
             | 🍄 **독버섯** | 5초간 **방향키 조작 반대** |
-            | 🐛 **애벌레** | 5초간 랜덤으로 **거대화** 또는 **축소** |
+            | 🐛 **애벌레** | 5초간 랜덤으로 **왕꿈틀이(싹쓸이 버프)** 또는 꼬마 변신 |
             | 🍊 **오렌지** | 점수 **-30점** 감점 |
             """)
             
@@ -570,10 +656,10 @@ with col2:
             st.markdown("""
             1. **⏳ 15초 굶주림(아사) 타이머 주의!**
                * 15초 안에 먹이를 먹지 못하면 **몸통이 2칸 깎여 나갑니다.** 
-            2. **🍄 독버섯을 먹었을 땐 머리 색을 보세요!**
-               * 방향키가 반대로 바뀌면 지렁이의 머리가 **빨간색(경고색)**으로 변합니다.
+            2. **🐛 왕꿈틀이 싹쓸이 모드**
+               * 애벌레를 먹고 거대해졌을 땐, 주변을 스치기만 해도 모든 먹이를 진공청소기처럼 쓸어 먹습니다!
             3. **💥 전략적 충돌 (몸통 다이어트)**
-               * 갇힐 위기라면 벽에 박으세요! 죽어도 **점수는 깎이지 않고 몸통만 3칸 다이어트** 됩니다.
+               * 갇힐 위기라면 벽에 박으세요! 죽어도 점수는 깎이지 않고 **몸통만 3칸 다이어트** 됩니다.
             """)
 
     st.subheader("🏆 실시간 TOP 10")
