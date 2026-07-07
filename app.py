@@ -6,7 +6,7 @@ import time
 import datetime
 
 # 페이지 설정
-st.set_page_config(page_title="꿈틀꿈틀", page_icon="🐍", layout="wide")
+st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
 
 # -------------------------------------------------------------
 # 🎮 [HTML/JS 게임 엔진 생성]
@@ -79,13 +79,17 @@ GAME_HTML = """
         let speedMod = 1;
         let isReversedControls = false;
         
+        // 🌟 애벌레 거대화/축소 모디파이어 변수 추가
+        let snakeSizeMod = 1; 
+        
         let blindTimeout = null;
         let controlTimeout = null;
+        let sizeTimeout = null;
 
         function initGame() {
             snake = [{ x: 300, y: 300 }]; dx = 0; dy = -gridSize;
             score = 0; lives = 3; isGameOver = false;
-            baseSpeed = 100; speedMod = 1; isReversedControls = false;
+            baseSpeed = 100; speedMod = 1; isReversedControls = false; snakeSizeMod = 1;
             document.getElementById("blindOverlay").style.display = "none";
             updateUI();
             
@@ -181,6 +185,11 @@ GAME_HTML = """
             clearInterval(gameInterval);
             document.getElementById("blindOverlay").style.display = "none";
             isReversedControls = false; 
+            
+            // 🌟 부활 시 효과 초기화
+            snakeSizeMod = 1;
+            if(sizeTimeout) clearTimeout(sizeTimeout);
+            
             updateUI();
             
             const headDiffX = 300 - snake[0].x;
@@ -203,48 +212,54 @@ GAME_HTML = """
 
         function clearCanvas() { ctx.fillStyle = "#34495e"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
         
-        // 🌟 지렁이 머리와 꼬리를 디테일하게 그리는 로직 🌟
+        // 🌟 지렁이 몸집(SizeMod)에 맞춰 눈 크기와 꼬리가 다이나믹하게 변하는 로직 🌟
         function drawSnake() { 
             snake.forEach((part, index) => { 
                 let isHead = (index === 0);
                 let isTail = (index === snake.length - 1 && snake.length > 1);
 
-                // 색상 결정 (독버섯 상태일 땐 경고색)
                 if (isHead) ctx.fillStyle = isReversedControls ? "#e74c3c" : "#27ae60"; 
                 else ctx.fillStyle = isReversedControls ? "#c0392b" : "#2ecc71";
 
+                let currentDrawSize = (gridSize - 1) * snakeSizeMod;
+                let offset = (gridSize - currentDrawSize) / 2;
+
                 if (isTail) {
-                    // 꼬리는 약간 작게 그려서 얇아지는 느낌을 줌
-                    let margin = 4;
-                    ctx.fillRect(part.x + margin, part.y + margin, gridSize - (margin*2), gridSize - (margin*2));
+                    let tailSize = currentDrawSize * 0.6;
+                    let tailOffset = (gridSize - tailSize) / 2;
+                    ctx.fillRect(part.x + tailOffset, part.y + tailOffset, tailSize, tailSize);
                 } else {
-                    // 머리와 일반 몸통
-                    ctx.fillRect(part.x, part.y, gridSize - 1, gridSize - 1); 
+                    ctx.fillRect(part.x + offset, part.y + offset, currentDrawSize, currentDrawSize); 
                 }
 
-                // 머리에 귀여운 눈과 눈동자 추가 (진행 방향에 따라 눈동자 위치 변경)
                 if (isHead) {
                     ctx.fillStyle = "white";
+                    let cx = part.x + 10;
+                    let cy = part.y + 10;
+                    
+                    let eyeDist = 4 * snakeSizeMod;
+                    let eyeOffset = 4 * snakeSizeMod;
+                    let eyeRadius = 3.5 * snakeSizeMod;
+                    let pupilRadius = 1.5 * snakeSizeMod;
+                    
                     let e1x, e1y, e2x, e2y, px, py;
                     
-                    if (dx > 0) { // 오른쪽 이동
-                        e1x = 14; e1y = 6; e2x = 14; e2y = 14; px = 2; py = 0;
-                    } else if (dx < 0) { // 왼쪽 이동
-                        e1x = 6; e1y = 6; e2x = 6; e2y = 14; px = -2; py = 0;
-                    } else if (dy > 0) { // 아래로 이동
-                        e1x = 6; e1y = 14; e2x = 14; e2y = 14; px = 0; py = 2;
-                    } else { // 위로 이동 (기본값)
-                        e1x = 6; e1y = 6; e2x = 14; e2y = 6; px = 0; py = -2;
+                    if (dx > 0) {
+                        e1x = cx + eyeOffset; e1y = cy - eyeDist; e2x = cx + eyeOffset; e2y = cy + eyeDist; px = 2 * snakeSizeMod; py = 0;
+                    } else if (dx < 0) {
+                        e1x = cx - eyeOffset; e1y = cy - eyeDist; e2x = cx - eyeOffset; e2y = cy + eyeDist; px = -2 * snakeSizeMod; py = 0;
+                    } else if (dy > 0) {
+                        e1x = cx - eyeDist; e1y = cy + eyeOffset; e2x = cx + eyeDist; e2y = cy + eyeOffset; px = 0; py = 2 * snakeSizeMod;
+                    } else {
+                        e1x = cx - eyeDist; e1y = cy - eyeOffset; e2x = cx + eyeDist; e2y = cy - eyeOffset; px = 0; py = -2 * snakeSizeMod;
                     }
                     
-                    // 흰자 그리기
-                    ctx.beginPath(); ctx.arc(part.x + e1x, part.y + e1y, 3.5, 0, Math.PI*2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(part.x + e2x, part.y + e2y, 3.5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(e1x, e1y, eyeRadius, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(e2x, e2y, eyeRadius, 0, Math.PI*2); ctx.fill();
                     
-                    // 검은 눈동자 그리기 (진행 방향으로 쏠림)
                     ctx.fillStyle = "black";
-                    ctx.beginPath(); ctx.arc(part.x + e1x + px, part.y + e1y + py, 1.5, 0, Math.PI*2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(part.x + e2x + px, part.y + e2y + py, 1.5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(e1x + px, e1y + py, pupilRadius, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(e2x + px, e2y + py, pupilRadius, 0, Math.PI*2); ctx.fill();
                 }
             }); 
         }
@@ -308,6 +323,18 @@ GAME_HTML = """
                 if(controlTimeout) clearTimeout(controlTimeout);
                 controlTimeout = setTimeout(() => { isReversedControls = false; effectDisplay.innerText = ""; }, 5000);
                 
+            // 🌟 [NEW] 애벌레 거대화/축소 로직 추가
+            } else if (type === 'caterpillar') {
+                if (Math.random() < 0.5) {
+                    effectDisplay.innerText = "🐛 왕꿈틀이! 5초간 몸집이 거대해집니다!"; effectDisplay.style.color = "#2ecc71";
+                    snakeSizeMod = 1.6; // 1.6배 뚱뚱해짐
+                } else {
+                    effectDisplay.innerText = "🐛 꼬마 애벌레! 5초간 몸집이 콩알만해집니다!"; effectDisplay.style.color = "#f1c40f";
+                    snakeSizeMod = 0.5; // 절반으로 얇아짐
+                }
+                if(sizeTimeout) clearTimeout(sizeTimeout);
+                sizeTimeout = setTimeout(() => { snakeSizeMod = 1; effectDisplay.innerText = ""; }, 5000);
+
             } else if (type === 'bonus') {
                 score += 50; effectDisplay.innerText = "🍎 보너스 +50점!"; effectDisplay.style.color = "#f1c40f";
             } else if (type === 'slow') {
@@ -325,7 +352,7 @@ GAME_HTML = """
             }
             
             updateGameDifficulty(); 
-            setTimeout(() => { if(!['slow','fast','blind','reverse'].includes(type)) effectDisplay.innerText = ""; }, 2500);
+            setTimeout(() => { if(!['slow','fast','blind','reverse','caterpillar'].includes(type)) effectDisplay.innerText = ""; }, 2500);
         }
 
         function spawnHiddenFruit() {
@@ -333,9 +360,11 @@ GAME_HTML = """
             let fruit = { x: pos.x, y: pos.y, emoji: '❓', type: '', id: Date.now() };
             const rand = Math.random();
             
-            if (rand < 0.15) { fruit.type = 'blind'; }
-            else if (rand < 0.30) { fruit.type = 'tunnel'; }
-            else if (rand < 0.45) { fruit.type = 'reverse'; }
+            // 🌟 아이템 스폰 확률 리스트에 '애벌레' 추가
+            if (rand < 0.12) { fruit.type = 'blind'; }
+            else if (rand < 0.24) { fruit.type = 'tunnel'; }
+            else if (rand < 0.36) { fruit.type = 'reverse'; }
+            else if (rand < 0.48) { fruit.type = 'caterpillar'; } // NEW: 애벌레 12% 확률
             else if (rand < 0.60) { fruit.type = 'bonus'; }
             else if (rand < 0.70) { fruit.type = 'slow'; }
             else if (rand < 0.80) { fruit.type = 'fast'; }
@@ -389,14 +418,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v10)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v11)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v10")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v11")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v10", path=component_dir)
+snake_game = components.declare_component("snake_v11", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
