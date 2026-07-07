@@ -66,7 +66,7 @@ GAME_HTML = """
             window.parent.postMessage(msg, "*");
         }
 
-        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 900 }); }
+        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 800 }); }
         window.addEventListener("load", function() { sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); setHeight(); });
         window.addEventListener("message", function(event) { if (event.data && event.data.type === "streamlit:render") setHeight(); });
 
