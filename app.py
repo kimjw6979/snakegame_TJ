@@ -17,8 +17,7 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <style>
-        /* 🌟 수정됨: 높이를 900px에서 760px로 줄여 위아래 불필요한 여백 제거 */
-        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 760px; overflow: hidden; }
+        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 900px; overflow: hidden; }
         
         .canvas-container { position: relative; width: 600px; height: 600px; }
         canvas { background-color: #34495e; border: 3px solid #ecf0f1; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
@@ -67,8 +66,7 @@ GAME_HTML = """
             window.parent.postMessage(msg, "*");
         }
 
-        // 🌟 수정됨: Streamlit 컴포넌트 프레임 높이도 760으로 맞춤
-        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 760 }); }
+        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 900 }); }
         window.addEventListener("load", function() { sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); setHeight(); });
         window.addEventListener("message", function(event) { if (event.data && event.data.type === "streamlit:render") setHeight(); });
 
@@ -92,6 +90,7 @@ GAME_HTML = """
         let hungerTimer = 15;
         let hungerInterval = null;
         
+        // 🌟 블랙홀(워프 게이트) 관련 변수
         let warpGate = { active: false, p1: {x: 0, y: 0}, p2: {x: 0, y: 0} };
         let warpTimeout = null;
         let warpScheduleTimeout = null;
@@ -206,6 +205,7 @@ GAME_HTML = """
             if (normalFoods.length === 0) normalFoods.push(generateValidPosition());
         }
         
+        // 🌟 수정됨: 반대쪽 끝에 2x2 사이즈로 블랙홀 생성 로직 
         function scheduleWarpGate() {
             warpScheduleTimeout = setTimeout(() => {
                 if(!isGameOver && isStarted) {
@@ -214,21 +214,24 @@ GAME_HTML = """
                     warpGate.p2 = portals[1];
                     warpGate.active = true;
                     
+                    // 10초 뒤에 닫히고 다음 블랙홀 대기
                     warpTimeout = setTimeout(() => {
                         warpGate.active = false;
                         scheduleWarpGate();
                     }, 10000);
                 }
-            }, Math.random() * 10000 + 10000); 
+            }, Math.random() * 10000 + 10000); // 10~20초 주기
         }
         
+        // 블랙홀을 상하 반대 또는 좌우 반대로 배치 (크기는 2x2)
         function generateFarPortals() {
             let p1, p2;
             let isHorizontal = Math.random() < 0.5;
-            let maxIdx = (canvas.width / gridSize) - 3; 
+            let maxIdx = (canvas.width / gridSize) - 3; // 2x2 공간 확보 (최대 인덱스)
             
             while (true) {
                 if (isHorizontal) {
+                    // 왼쪽 끝(x: 1~3) vs 오른쪽 끝(x: 24~26)
                     let leftX = Math.floor(Math.random() * 3) + 1;
                     let rightX = maxIdx - Math.floor(Math.random() * 3);
                     let y1 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
@@ -236,6 +239,7 @@ GAME_HTML = """
                     p1 = { x: leftX * gridSize, y: y1 * gridSize };
                     p2 = { x: rightX * gridSize, y: y2 * gridSize };
                 } else {
+                    // 위쪽 끝(y: 1~3) vs 아래쪽 끝(y: 24~26)
                     let topY = Math.floor(Math.random() * 3) + 1;
                     let bottomY = maxIdx - Math.floor(Math.random() * 3);
                     let x1 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
@@ -244,6 +248,7 @@ GAME_HTML = """
                     p2 = { x: x2 * gridSize, y: bottomY * gridSize };
                 }
                 
+                // 스폰 지점에 지렁이가 겹치는지 체크 (2x2 영역)
                 let overlap = false;
                 for (let part of snake) {
                     if ((part.x >= p1.x && part.x < p1.x + 2*gridSize && part.y >= p1.y && part.y < p1.y + 2*gridSize) ||
@@ -399,9 +404,10 @@ GAME_HTML = """
             });
         }
         
+        // 🌟 수정됨: 블랙홀을 2x2 사이즈(40px)로 큼직하게 그리기
         function drawWarpGate() {
             if (!warpGate.active) return;
-            ctx.font = "40px Arial"; 
+            ctx.font = "40px Arial"; // 이모지 폰트 2배 확대
             ctx.textAlign = "center"; 
             ctx.textBaseline = "middle";
             ctx.fillText("🕳️", warpGate.p1.x + gridSize, warpGate.p1.y + gridSize + 2);
@@ -411,12 +417,14 @@ GAME_HTML = """
         function advanceSnake() { 
             let head = { x: snake[0].x + dx, y: snake[0].y + dy }; 
             
+            // 🌟 수정됨: 블랙홀 2x2(4칸) 영역으로 이동 판정 확장
             if (warpGate.active && hitWarpCooldown <= 0) {
                 if (head.x >= warpGate.p1.x && head.x < warpGate.p1.x + 2*gridSize &&
                     head.y >= warpGate.p1.y && head.y < warpGate.p1.y + 2*gridSize) {
+                    // 들어간 위치 비율 그대로 반대편 포탈에서 나오게 처리
                     head.x = warpGate.p2.x + (head.x - warpGate.p1.x);
                     head.y = warpGate.p2.y + (head.y - warpGate.p1.y);
-                    hitWarpCooldown = 4; 
+                    hitWarpCooldown = 4; // 2x2를 빠져나올 넉넉한 쿨타임
                 } else if (head.x >= warpGate.p2.x && head.x < warpGate.p2.x + 2*gridSize &&
                            head.y >= warpGate.p2.y && head.y < warpGate.p2.y + 2*gridSize) {
                     head.x = warpGate.p1.x + (head.x - warpGate.p2.x);
@@ -577,14 +585,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v18)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v17)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v18")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v17")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v18", path=component_dir)
+snake_game = components.declare_component("snake_v17", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
