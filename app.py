@@ -524,19 +524,19 @@ GAME_HTML = """
             let hitRange = (snakeSizeMod > 1.2) ? gridSize : 0;
             let ateSomething = false;
 
-            // 🌐 250점 돌파 격자 이벤트!
+            // 🌐 250점 돌파 격자 이벤트! (10초 유지)
             if (score >= 250 && !gridTriggered) {
                 gridTriggered = true;
                 isGridTime = true;
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🌐 250점 달성! 5초간 맵에 격자가 표시됩니다!";
+                effectDisplay.innerText = "🌐 250점 달성! 10초간 맵에 격자가 표시됩니다!";
                 effectDisplay.style.color = "#3498db";
                 
                 gridTimeout = setTimeout(() => {
                     isGridTime = false;
                     if (!isGameOver && !isPaused && !isBonusTime) effectDisplay.innerText = "";
-                }, 5000);
+                }, 10000); // 10초
             }
 
             // 🍀 클로버 등장 로직
@@ -609,7 +609,7 @@ GAME_HTML = """
                 snake.pop(); 
             }
             
-            // 🌟 500점 단위 돌파 보너스 타임 (스케일링 적용)
+            // 🌟 500점 단위 돌파 보너스 타임 (스케일링 적용, 10초 유지)
             if (score >= nextBonusScore && !isBonusTime) {
                 // 점수 구간에 따라 스폰 개수 증가
                 let spawnCount = 40; // 500점 기본
@@ -627,7 +627,7 @@ GAME_HTML = """
                 }
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = `🎉 보너스 타임! 3초간 별이 ${spawnCount}개 쏟아집니다!`; 
+                effectDisplay.innerText = `🎉 보너스 타임! 10초간 별이 ${spawnCount}개 쏟아집니다!`; 
                 effectDisplay.style.color = "#f1c40f";
                 
                 bonusTimeTimeout = setTimeout(() => {
@@ -636,7 +636,7 @@ GAME_HTML = """
                     if (!isGameOver && !isPaused && !isGridTime) {
                         effectDisplay.innerText = "";
                     }
-                }, 3000);
+                }, 10000); // 10초
             }
         }
 
@@ -790,14 +790,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v23)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v24)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v23")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v24")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v23", path=component_dir)
+snake_game = components.declare_component("snake_v24", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -833,8 +833,8 @@ def save_score(nickname, score):
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("     🐍 TJ Random Speed Rush 🎮 ")
-st.info("      🏆 최고의 점수에 도전해봅시다! 일시정지 [P]키 1번 가능! 게임가이드 보고 시작해보기‼ ")
+st.title("  🐍 TJ Random Speed Rush 🎮  ")
+st.info("  🏆 최고의 점수에 도전해봅시다! 일시정지 [P]키 1번 가능! 게임가이드 보고 시작해보기‼  ")
 
 col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
 
@@ -870,8 +870,8 @@ with col2:
             * **목숨(하트) 시스템**: 총 **3개(❤️❤️❤️)**의 목숨이 주어집니다.
               * 충돌 시 점수 감점 없이 **몸통만 3칸 줄어든 채** 중앙에서 부활합니다.
             * 🕳️ **대형 블랙홀(워프 게이트)**: 10~20초 주기로 맵 **상하/좌우 양끝단**에 대형 2x2 사이즈 블랙홀 2개가 열립니다. 쏙 들어가면 맵 반대편으로 순간이동하는 지름길입니다!
-            * 🌐 **250점 격자 버프!**: 250점을 돌파하면 5초간 맵에 길을 찾기 쉽게 도와주는 **반투명 격자**가 나타납니다.
-            * 🎉 **500점 돌파 피버 타임!**: 점수가 500단위에 도달하면 **3초간 맵에 ⭐️(보너스 별)이 가득 차오르는** 피버 타임이 발동합니다! (고득점일수록 별 개수 증가!)
+            * 🌐 **250점 격자 버프!**: 250점을 돌파하면 **10초간** 맵에 길을 찾기 쉽게 도와주는 반투명 격자가 나타납니다.
+            * 🎉 **500점 돌파 피버 타임!**: 점수가 500단위에 도달하면 **10초간** 맵에 ⭐️(보너스 별)이 가득 차오르는 피버 타임이 발동합니다! (고득점일수록 별 개수 증가!)
             """)
             
         with tab2:
