@@ -95,7 +95,7 @@ GAME_HTML = """
         let warpScheduleTimeout = null;
         let hitWarpCooldown = 0; 
 
-        // 🍀 클로버, ⏸️ 일시정지, 🌟 보너스 타임 관련 변수
+        // 🍀 클로버, ⏸️ 일시정지, 🌟 보너스 타임, 🌐 격자 이벤트 변수
         let clover = null;
         let cloverSpawned = false;
         let cloverTimeout = null;
@@ -107,6 +107,10 @@ GAME_HTML = """
         let isBonusTime = false;
         let bonusFoods = [];
         let bonusTimeTimeout = null;
+        
+        let gridTriggered = false;
+        let isGridTime = false;
+        let gridTimeout = null;
 
         function initGame() {
             snake = [{ x: 300, y: 300 }]; dx = 0; dy = -gridSize;
@@ -123,11 +127,15 @@ GAME_HTML = """
             isPaused = false;
             pauseUsed = false;
             
-            // 보너스 타임 초기화
+            // 보너스 및 격자 이벤트 초기화
             nextBonusScore = 500;
             isBonusTime = false;
             bonusFoods = [];
             if(bonusTimeTimeout) clearTimeout(bonusTimeTimeout);
+            
+            gridTriggered = false;
+            isGridTime = false;
+            if(gridTimeout) clearTimeout(gridTimeout);
             
             if(warpTimeout) clearTimeout(warpTimeout);
             if(warpScheduleTimeout) clearTimeout(warpScheduleTimeout);
@@ -147,7 +155,7 @@ GAME_HTML = """
             document.getElementById("currentScore").innerText = score;
             document.getElementById("heartDisplay").innerText = "❤️".repeat(lives);
             document.getElementById("foodTimerDisplay").innerText = hungerTimer;
-            if (!isBonusTime) document.getElementById("itemEffect").innerText = "";
+            if (!isBonusTime && !isGridTime) document.getElementById("itemEffect").innerText = "";
         }
 
         document.getElementById("startBtn").addEventListener("click", triggerStart);
@@ -196,7 +204,9 @@ GAME_HTML = """
                     effectDisplay.style.color = "#e74c3c";
                     
                     setTimeout(() => { 
-                        if(effectDisplay.innerText.includes("아사")) effectDisplay.innerText = ""; 
+                        if(effectDisplay.innerText.includes("아사") && !isBonusTime && !isGridTime) {
+                            effectDisplay.innerText = ""; 
+                        }
                     }, 2000);
                     
                     hungerTimer = 10;
@@ -291,9 +301,23 @@ GAME_HTML = """
             ctx.fillText(text, canvas.width / 2, canvas.height / 2);
         }
 
+        function drawGrid() {
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.15)"; // 눈에 거슬리지 않는 반투명 흰색 선
+            ctx.lineWidth = 1;
+            for(let x = 0; x <= canvas.width; x += gridSize) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for(let y = 0; y <= canvas.height; y += gridSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+        }
+
         function main() {
             if (checkCollision()) { handleDeath(); return; }
             clearCanvas(); 
+            
+            // 🌐 250점 돌파 격자 효과
+            if (isGridTime) drawGrid();
             
             // 🌟 보너스 타임 텍스트 배경 효과
             if (isBonusTime) {
@@ -343,10 +367,13 @@ GAME_HTML = """
             snakeSizeMod = 1;
             if(sizeTimeout) clearTimeout(sizeTimeout);
             
-            // 보너스 타임 중 죽었을 때 초기화
+            // 보너스, 격자 타임 중 죽었을 때 초기화
             if(bonusTimeTimeout) clearTimeout(bonusTimeTimeout);
             isBonusTime = false;
             bonusFoods = [];
+            
+            if(gridTimeout) clearTimeout(gridTimeout);
+            isGridTime = false;
             
             updateUI();
             
@@ -371,6 +398,7 @@ GAME_HTML = """
             if(warpScheduleTimeout) clearTimeout(warpScheduleTimeout);
             if(cloverTimeout) clearTimeout(cloverTimeout);
             if(bonusTimeTimeout) clearTimeout(bonusTimeTimeout);
+            if(gridTimeout) clearTimeout(gridTimeout);
             
             isGameOver = true; isStarted = false;
             
@@ -496,6 +524,21 @@ GAME_HTML = """
             let hitRange = (snakeSizeMod > 1.2) ? gridSize : 0;
             let ateSomething = false;
 
+            // 🌐 250점 돌파 격자 이벤트!
+            if (score >= 250 && !gridTriggered) {
+                gridTriggered = true;
+                isGridTime = true;
+                
+                const effectDisplay = document.getElementById("itemEffect");
+                effectDisplay.innerText = "🌐 250점 달성! 5초간 맵에 격자가 표시됩니다!";
+                effectDisplay.style.color = "#3498db";
+                
+                gridTimeout = setTimeout(() => {
+                    isGridTime = false;
+                    if (!isGameOver && !isPaused && !isBonusTime) effectDisplay.innerText = "";
+                }, 5000);
+            }
+
             // 🍀 클로버 등장 로직
             if (snake.length >= 35 && !cloverSpawned) {
                 cloverSpawned = true;
@@ -566,25 +609,31 @@ GAME_HTML = """
                 snake.pop(); 
             }
             
-            // 🌟 500점 돌파 보너스 타임 트리거
+            // 🌟 500점 단위 돌파 보너스 타임 (스케일링 적용)
             if (score >= nextBonusScore && !isBonusTime) {
-                nextBonusScore = Math.floor(score / 500) * 500 + 500; // 다음 500점 단위 지정
+                // 점수 구간에 따라 스폰 개수 증가
+                let spawnCount = 40; // 500점 기본
+                if (nextBonusScore === 1000) spawnCount = 50;
+                else if (nextBonusScore === 1500) spawnCount = 60;
+                else if (nextBonusScore >= 2000) spawnCount = 80;
+                
+                nextBonusScore = Math.floor(score / 500) * 500 + 500; // 다음 목표 점수 갱신
                 isBonusTime = true;
                 bonusFoods = [];
                 
-                // 보너스 먹이 40개 스폰
-                for (let i = 0; i < 40; i++) {
+                // 지정된 개수만큼 보너스 먹이 스폰
+                for (let i = 0; i < spawnCount; i++) {
                     bonusFoods.push(generateValidPosition());
                 }
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🎉 보너스 타임! 3초간 별이 쏟아집니다!"; 
+                effectDisplay.innerText = `🎉 보너스 타임! 3초간 별이 ${spawnCount}개 쏟아집니다!`; 
                 effectDisplay.style.color = "#f1c40f";
                 
                 bonusTimeTimeout = setTimeout(() => {
                     isBonusTime = false;
                     bonusFoods = [];
-                    if (!isGameOver && !isPaused) {
+                    if (!isGameOver && !isPaused && !isGridTime) {
                         effectDisplay.innerText = "";
                     }
                 }, 3000);
@@ -597,7 +646,7 @@ GAME_HTML = """
                 effectDisplay.innerText = "☁️ 구름! 3초간 눈앞이 캄캄해집니다!"; effectDisplay.style.color = "#7f8c8d";
                 document.getElementById("blindOverlay").style.display = "flex";
                 if(blindTimeout) clearTimeout(blindTimeout);
-                blindTimeout = setTimeout(() => { document.getElementById("blindOverlay").style.display = "none"; effectDisplay.innerText = ""; }, 3000);
+                blindTimeout = setTimeout(() => { document.getElementById("blindOverlay").style.display = "none"; if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 3000);
             
             } else if (type === 'tunnel') {
                 effectDisplay.innerText = "🌀 터널! 지렁이 방향이 거꾸로 뒤집힙니다!"; effectDisplay.style.color = "#9b59b6";
@@ -615,7 +664,7 @@ GAME_HTML = """
                 effectDisplay.innerText = "🍄 독버섯! 3초간 방향키가 반대로 조작됩니다!"; effectDisplay.style.color = "#e67e22";
                 isReversedControls = true;
                 if(controlTimeout) clearTimeout(controlTimeout);
-                controlTimeout = setTimeout(() => { isReversedControls = false; effectDisplay.innerText = ""; }, 3000);
+                controlTimeout = setTimeout(() => { isReversedControls = false; if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 3000);
                 
             } else if (type === 'caterpillar') {
                 if (Math.random() < 0.5) {
@@ -626,18 +675,18 @@ GAME_HTML = """
                     snakeSizeMod = 0.5; 
                 }
                 if(sizeTimeout) clearTimeout(sizeTimeout);
-                sizeTimeout = setTimeout(() => { snakeSizeMod = 1; effectDisplay.innerText = ""; }, 5000);
+                sizeTimeout = setTimeout(() => { snakeSizeMod = 1; if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 5000);
 
             } else if (type === 'bonus') {
                 score += 50; effectDisplay.innerText = "🍎 보너스 +50점!"; effectDisplay.style.color = "#f1c40f";
             } else if (type === 'slow') {
                 effectDisplay.innerText = "🐢 바나나! 느릿느릿~ (5초)"; effectDisplay.style.color = "#3498db";
                 speedMod = 1.6; updateSpeed();
-                setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } effectDisplay.innerText = ""; }, 5000);
+                setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'fast') {
                 effectDisplay.innerText = "⚡ 포도! 아주 빠르게! (5초)"; effectDisplay.style.color = "#9b59b6";
                 speedMod = 0.5; updateSpeed();
-                setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } effectDisplay.innerText = ""; }, 5000);
+                setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'penalty') {
                 score = Math.max(0, score - 30); effectDisplay.innerText = "💀 오렌지! 감점 -30점!"; effectDisplay.style.color = "#e74c3c";
             } else if (type === 'super') {
@@ -645,7 +694,7 @@ GAME_HTML = """
             }
             
             updateGameDifficulty(); 
-            setTimeout(() => { if(!['slow','fast','blind','reverse','caterpillar'].includes(type) && !isBonusTime) effectDisplay.innerText = ""; }, 2500);
+            setTimeout(() => { if(!['slow','fast','blind','reverse','caterpillar'].includes(type) && !isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 2500);
         }
 
         function spawnHiddenFruit() {
@@ -700,10 +749,6 @@ GAME_HTML = """
                     pauseUsed = true; // 게임당 1회 제한
                     clearInterval(gameInterval);
                     if (hungerInterval) clearInterval(hungerInterval);
-                    if (bonusTimeTimeout) {
-                        // 일시정지 시 보너스타임 타이머를 잠시 멈추는 건 복잡하므로 
-                        // 자연스럽게 시간이 흘러가게 두거나 상태만 유지합니다.
-                    }
                     
                     ctx.fillStyle = "rgba(0, 0, 0, 0.6)"; 
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -745,14 +790,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v22)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v23)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v22")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v23")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v22", path=component_dir)
+snake_game = components.declare_component("snake_v23", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -825,7 +870,8 @@ with col2:
             * **목숨(하트) 시스템**: 총 **3개(❤️❤️❤️)**의 목숨이 주어집니다.
               * 충돌 시 점수 감점 없이 **몸통만 3칸 줄어든 채** 중앙에서 부활합니다.
             * 🕳️ **대형 블랙홀(워프 게이트)**: 10~20초 주기로 맵 **상하/좌우 양끝단**에 대형 2x2 사이즈 블랙홀 2개가 열립니다. 쏙 들어가면 맵 반대편으로 순간이동하는 지름길입니다!
-            * 🎉 **500점 돌파 피버 타임!**: 점수가 500점, 1000점 등 500단위에 도달하면 **3초간 맵에 ⭐️(보너스 별)이 가득 차오르는** 피버 타임이 발동합니다!
+            * 🌐 **250점 격자 버프!**: 250점을 돌파하면 5초간 맵에 길을 찾기 쉽게 도와주는 **반투명 격자**가 나타납니다.
+            * 🎉 **500점 돌파 피버 타임!**: 점수가 500단위에 도달하면 **3초간 맵에 ⭐️(보너스 별)이 가득 차오르는** 피버 타임이 발동합니다! (고득점일수록 별 개수 증가!)
             """)
             
         with tab2:
