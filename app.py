@@ -662,14 +662,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v20)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v21)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v20")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v21")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v20", path=component_dir)
+snake_game = components.declare_component("snake_v21", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -708,11 +708,11 @@ def save_score(nickname, score):
 st.title("🐍 TJ Random Speed Rush 🎮 ")
 st.info(" 🏆 최고의 점수에 도전해봅시다! 일시정지 [P]키 1번 가능! 게임가이드 보고 시작해보기‼ ")
 
-# 🌟 수정됨: 좌측에 빈 여백(col_empty)을 주어 게임판 배경 가로 너비를 좁혔습니다!
-col_empty, col1, col2 = st.columns([0.5, 2.2, 1.3])
+# 🌟 수정됨: 좌측 여백을 0.1로 더 줄이고, 우측(col2)을 1.8로 넓혀서 표 글씨가 안 깨지게 조정!
+col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
 
 with col_empty:
-    st.empty() # 화면을 중앙으로 밀어주는 역할
+    st.empty() 
 
 with col1:
     result = snake_game()
