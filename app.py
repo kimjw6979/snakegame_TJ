@@ -94,7 +94,7 @@ GAME_HTML = """
         let warpGate = { active: false, p1: {x: 0, y: 0}, p2: {x: 0, y: 0} };
         let warpTimeout = null;
         let warpScheduleTimeout = null;
-        let hitWarpCooldown = 0; // 무한 워프 방지용 쿨다운
+        let hitWarpCooldown = 0; 
 
         function initGame() {
             snake = [{ x: 300, y: 300 }]; dx = 0; dy = -gridSize;
@@ -104,7 +104,6 @@ GAME_HTML = """
             hungerTimer = 15;
             if (hungerInterval) clearInterval(hungerInterval);
             
-            // 블랙홀 초기화
             if(warpTimeout) clearTimeout(warpTimeout);
             if(warpScheduleTimeout) clearTimeout(warpScheduleTimeout);
             warpGate.active = false;
@@ -206,34 +205,60 @@ GAME_HTML = """
             if (normalFoods.length === 0) normalFoods.push(generateValidPosition());
         }
         
-        // 🌟 블랙홀(워프 게이트) 스케줄 및 스폰 로직
+        // 🌟 수정됨: 반대쪽 끝에 2x2 사이즈로 블랙홀 생성 로직 
         function scheduleWarpGate() {
             warpScheduleTimeout = setTimeout(() => {
                 if(!isGameOver && isStarted) {
-                    // 가장자리 벽에서 나오자마자 죽는 것을 방지하기 위해 안전 구역에 스폰
-                    warpGate.p1 = generateSafePortalPosition();
-                    warpGate.p2 = generateSafePortalPosition();
+                    let portals = generateFarPortals();
+                    warpGate.p1 = portals[0];
+                    warpGate.p2 = portals[1];
                     warpGate.active = true;
                     
-                    // 10초 뒤에 닫히고 다음 블랙홀 스케줄링
+                    // 10초 뒤에 닫히고 다음 블랙홀 대기
                     warpTimeout = setTimeout(() => {
                         warpGate.active = false;
                         scheduleWarpGate();
                     }, 10000);
                 }
-            }, Math.random() * 10000 + 10000); // 10~20초 주기로 등장
+            }, Math.random() * 10000 + 10000); // 10~20초 주기
         }
         
-        // 블랙홀은 너무 벽 쪽에 붙지 않게 스폰
-        function generateSafePortalPosition() {
-            let newPos;
+        // 블랙홀을 상하 반대 또는 좌우 반대로 배치 (크기는 2x2)
+        function generateFarPortals() {
+            let p1, p2;
+            let isHorizontal = Math.random() < 0.5;
+            let maxIdx = (canvas.width / gridSize) - 3; // 2x2 공간 확보 (최대 인덱스)
+            
             while (true) {
-                let gx = Math.floor(Math.random() * ((canvas.width/gridSize) - 2)) + 1;
-                let gy = Math.floor(Math.random() * ((canvas.height/gridSize) - 2)) + 1;
-                newPos = { x: gx * gridSize, y: gy * gridSize };
-                if (!snake.some(part => part.x === newPos.x && part.y === newPos.y)) break;
+                if (isHorizontal) {
+                    // 왼쪽 끝(x: 1~3) vs 오른쪽 끝(x: 24~26)
+                    let leftX = Math.floor(Math.random() * 3) + 1;
+                    let rightX = maxIdx - Math.floor(Math.random() * 3);
+                    let y1 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
+                    let y2 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
+                    p1 = { x: leftX * gridSize, y: y1 * gridSize };
+                    p2 = { x: rightX * gridSize, y: y2 * gridSize };
+                } else {
+                    // 위쪽 끝(y: 1~3) vs 아래쪽 끝(y: 24~26)
+                    let topY = Math.floor(Math.random() * 3) + 1;
+                    let bottomY = maxIdx - Math.floor(Math.random() * 3);
+                    let x1 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
+                    let x2 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
+                    p1 = { x: x1 * gridSize, y: topY * gridSize };
+                    p2 = { x: x2 * gridSize, y: bottomY * gridSize };
+                }
+                
+                // 스폰 지점에 지렁이가 겹치는지 체크 (2x2 영역)
+                let overlap = false;
+                for (let part of snake) {
+                    if ((part.x >= p1.x && part.x < p1.x + 2*gridSize && part.y >= p1.y && part.y < p1.y + 2*gridSize) ||
+                        (part.x >= p2.x && part.x < p2.x + 2*gridSize && part.y >= p2.y && part.y < p2.y + 2*gridSize)) {
+                        overlap = true; break;
+                    }
+                }
+                if (!overlap) break;
             }
-            return newPos;
+            return [p1, p2];
         }
 
         function drawScreenWithText(text) {
@@ -247,7 +272,7 @@ GAME_HTML = """
         function main() {
             if (checkCollision()) { handleDeath(); return; }
             clearCanvas(); 
-            drawWarpGate(); // 블랙홀 그리기
+            drawWarpGate(); 
             drawNormalFoods(); 
             drawHiddenFruits(); 
             advanceSnake(); 
@@ -379,35 +404,41 @@ GAME_HTML = """
             });
         }
         
+        // 🌟 수정됨: 블랙홀을 2x2 사이즈(40px)로 큼직하게 그리기
         function drawWarpGate() {
             if (!warpGate.active) return;
-            ctx.font = "24px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillText("🕳️", warpGate.p1.x + (gridSize / 2), warpGate.p1.y + (gridSize / 2) + 2);
-            ctx.fillText("🕳️", warpGate.p2.x + (gridSize / 2), warpGate.p2.y + (gridSize / 2) + 2);
+            ctx.font = "40px Arial"; // 이모지 폰트 2배 확대
+            ctx.textAlign = "center"; 
+            ctx.textBaseline = "middle";
+            ctx.fillText("🕳️", warpGate.p1.x + gridSize, warpGate.p1.y + gridSize + 2);
+            ctx.fillText("🕳️", warpGate.p2.x + gridSize, warpGate.p2.y + gridSize + 2);
         }
         
         function advanceSnake() { 
             let head = { x: snake[0].x + dx, y: snake[0].y + dy }; 
             
-            // 🌟 블랙홀 워프 로직 (머리가 정확히 일치할 때 이동)
+            // 🌟 수정됨: 블랙홀 2x2(4칸) 영역으로 이동 판정 확장
             if (warpGate.active && hitWarpCooldown <= 0) {
-                if (head.x === warpGate.p1.x && head.y === warpGate.p1.y) {
-                    head.x = warpGate.p2.x; head.y = warpGate.p2.y;
-                    hitWarpCooldown = 3; // 무한 이동 방지
-                } else if (head.x === warpGate.p2.x && head.y === warpGate.p2.y) {
-                    head.x = warpGate.p1.x; head.y = warpGate.p1.y;
-                    hitWarpCooldown = 3;
+                if (head.x >= warpGate.p1.x && head.x < warpGate.p1.x + 2*gridSize &&
+                    head.y >= warpGate.p1.y && head.y < warpGate.p1.y + 2*gridSize) {
+                    // 들어간 위치 비율 그대로 반대편 포탈에서 나오게 처리
+                    head.x = warpGate.p2.x + (head.x - warpGate.p1.x);
+                    head.y = warpGate.p2.y + (head.y - warpGate.p1.y);
+                    hitWarpCooldown = 4; // 2x2를 빠져나올 넉넉한 쿨타임
+                } else if (head.x >= warpGate.p2.x && head.x < warpGate.p2.x + 2*gridSize &&
+                           head.y >= warpGate.p2.y && head.y < warpGate.p2.y + 2*gridSize) {
+                    head.x = warpGate.p1.x + (head.x - warpGate.p2.x);
+                    head.y = warpGate.p1.y + (head.y - warpGate.p2.y);
+                    hitWarpCooldown = 4;
                 }
             }
             if (hitWarpCooldown > 0) hitWarpCooldown--;
             
             snake.unshift(head); 
             
-            // 🌟 왕꿈틀이(거대화) 상태일 경우 판정 범위를 1칸 넓힘 (주변 3x3 싹쓸이 가능)
             let hitRange = (snakeSizeMod > 1.2) ? gridSize : 0;
             let ateSomething = false;
 
-            // 먹이를 역순으로 순회하며 넓은 범위 싹쓸이 처리
             for (let i = normalFoods.length - 1; i >= 0; i--) {
                 let f = normalFoods[i];
                 if (Math.abs(f.x - head.x) <= hitRange && Math.abs(f.y - head.y) <= hitRange) {
@@ -420,7 +451,6 @@ GAME_HTML = """
                 }
             }
             
-            // 아이템도 넓은 범위로 싹쓸이
             for (let i = hiddenFruits.length - 1; i >= 0; i--) {
                 let f = hiddenFruits[i];
                 if (Math.abs(f.x - head.x) <= hitRange && Math.abs(f.y - head.y) <= hitRange) {
@@ -431,7 +461,6 @@ GAME_HTML = """
                 }
             }
 
-            // 아무것도 못 먹었으면 꼬리를 줄여서 길이 유지
             if (!ateSomething) {
                 snake.pop(); 
             }
@@ -556,14 +585,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v16)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v17)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v16")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v17")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v16", path=component_dir)
+snake_game = components.declare_component("snake_v17", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -600,7 +629,7 @@ def save_score(nickname, score):
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
 st.title("🐍 TJ Random Speed Rush 🎮 ")
-st.info("⬅⬆➡ 15초 카운트다운! 맵에 등장하는 **🕳️ 블랙홀(워프 게이트)**을 전략적으로 활용해 보세요!")
+st.info("⬅⬆➡ 15초 카운트다운! 맵 끝단에 열리는 **대형 🕳️ 블랙홀(워프 게이트)**을 전략적으로 활용해 보세요!")
 
 col1, col2 = st.columns([3, 1])
 
@@ -632,7 +661,7 @@ with col2:
               * 점수가 **100점** 오를 때마다 기본 먹이 개수가 증가합니다. (최대 5개)
             * **목숨(하트) 시스템**: 총 **3개(❤️❤️❤️)**의 목숨이 주어집니다.
               * 충돌 시 점수 감점 없이 **몸통만 3칸 줄어든 채** 중앙에서 부활합니다.
-            * 🕳️ **블랙홀(워프 게이트)**: 맵에 10~20초 주기로 블랙홀 2개가 열립니다. 쏙 들어가면 반대편으로 순간이동합니다.
+            * 🕳️ **대형 블랙홀(워프 게이트)**: 10~20초 주기로 맵 **상하/좌우 양끝단**에 대형 2x2 사이즈 블랙홀 2개가 열립니다. 쏙 들어가면 맵 반대편으로 순간이동하는 지름길입니다!
             """)
             
         with tab2:
@@ -657,7 +686,7 @@ with col2:
             1. **⏳ 15초 굶주림(아사) 타이머 주의!**
                * 15초 안에 먹이를 먹지 못하면 **몸통이 2칸 깎여 나갑니다.** 
             2. **🐛 왕꿈틀이 싹쓸이 모드**
-               * 애벌레를 먹고 거대해졌을 땐, 주변을 스치기만 해도 모든 먹이를 진공청소기처럼 쓸어 먹습니다!
+               * 애벌레를 먹고 거대해졌을 땐, 주변을 스치기만 해도 모든 먹이를 진공청소기처럼 싹쓸이로 먹을 수 있습니다!
             3. **💥 전략적 충돌 (몸통 다이어트)**
                * 갇힐 위기라면 벽에 박으세요! 죽어도 점수는 깎이지 않고 **몸통만 3칸 다이어트** 됩니다.
             """)
