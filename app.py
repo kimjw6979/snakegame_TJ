@@ -66,7 +66,7 @@ GAME_HTML = """
             window.parent.postMessage(msg, "*");
         }
 
-        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 800 }); }
+        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 900 }); }
         window.addEventListener("load", function() { sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); setHeight(); });
         window.addEventListener("message", function(event) { if (event.data && event.data.type === "streamlit:render") setHeight(); });
 
@@ -662,14 +662,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v19)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v20)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v19")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v20")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v19", path=component_dir)
+snake_game = components.declare_component("snake_v20", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -708,7 +708,11 @@ def save_score(nickname, score):
 st.title("🐍 TJ Random Speed Rush 🎮 ")
 st.info("⬅⬆➡ 10초 카운트다운! 맵 끝단에 열리는 **대형 🕳️ 블랙홀(워프 게이트)**을 전략적으로 활용해 보세요!")
 
-col1, col2 = st.columns([3, 1])
+# 🌟 수정됨: 좌측에 빈 여백(col_empty)을 주어 게임판 배경 가로 너비를 좁혔습니다!
+col_empty, col1, col2 = st.columns([0.5, 2.2, 1.3])
+
+with col_empty:
+    st.empty() # 화면을 중앙으로 밀어주는 역할
 
 with col1:
     result = snake_game()
