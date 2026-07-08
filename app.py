@@ -881,7 +881,7 @@ def save_score(nickname, score):
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
 st.title("🐍 TJ Random Speed Rush 🎮 ")
-st.info(" 최고의 점수에 도전해보자구요!! 게임가이드 보고 시작하기!! ")
+st.info(" 🏆 최고의 점수에 도전해보자구요!! 게임가이드 보고 시작하기! ")
 
 col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
 
