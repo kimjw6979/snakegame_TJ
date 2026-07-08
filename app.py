@@ -5,11 +5,11 @@ import os
 import time
 import datetime
 
-# 페이지 설정 (기본 상태로 되돌려 사이드바 버튼이 정상적으로 나오게 합니다)
+# 페이지 설정
 st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
 
 # -------------------------------------------------------------
-# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS] - 안전한 수정판!
+# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS]
 # -------------------------------------------------------------
 hide_menu_style = """
     <style>
@@ -490,13 +490,14 @@ GAME_HTML = """
             });
         }
 
-        // 🌟 수정됨: 대형 클로버 크기 2배(40px) 렌더링
+        // 🌟 초대형 클로버 그리기 (크기 240px로 뻥튀기!)
         function drawClover() {
             if (clover) {
-                ctx.font = "40px Arial"; 
+                ctx.font = "240px Arial"; 
                 ctx.textAlign = "center"; 
                 ctx.textBaseline = "middle";
-                ctx.fillText("🍀", clover.x + gridSize, clover.y + gridSize + 2);
+                // 정중앙 좌표(300, 300)에 딱 맞춰 렌더링
+                ctx.fillText("🍀", clover.x, clover.y);
             }
         }
         
@@ -557,31 +558,32 @@ GAME_HTML = """
                 }, 10000); 
             }
 
-            // 🍀 🌟 수정됨: 대형 클로버 등장 로직 (몸통 30칸 달성 시 맵 정중앙에 고정 스폰)
+            // 🍀 🌟 초대형 클로버 등장 로직 (몸통 30칸, 정중앙)
             if (snake.length >= 30 && !cloverSpawned) {
                 cloverSpawned = true;
-                clover = { x: 280, y: 280 }; // 600x600 맵의 정중앙에 40x40 크기로 배치
+                // x:300, y:300 정중앙 스폰, 반경 100px (가로세로 200px) 충돌 허용!
+                clover = { x: 300, y: 300, hitRadius: 100 }; 
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🍀 정중앙에 대형 클로버 등장! (2초 후 사라집니다!)"; 
+                effectDisplay.innerText = "🍀 정중앙에 초대형 클로버 등장! (2초 후 사라집니다!)"; 
                 effectDisplay.style.color = "#2ecc71";
 
                 cloverTimeout = setTimeout(() => {
                     clover = null;
-                }, 2000); // 2초 유지 (극한의 타이밍!)
+                }, 2000); 
             }
 
-            // 🍀 🌟 수정됨: 대형 클로버 획득 처리 (2x2 공간 충돌 판정 적용)
+            // 🍀 🌟 초대형 클로버 획득 처리 (충돌 범위를 엄청나게 넓혀서 스치기만 해도 획득!)
             if (clover && 
-                head.x >= clover.x && head.x < clover.x + 2*gridSize &&
-                head.y >= clover.y && head.y < clover.y + 2*gridSize) {
+                head.x >= clover.x - clover.hitRadius && head.x < clover.x + clover.hitRadius &&
+                head.y >= clover.y - clover.hitRadius && head.y < clover.y + clover.hitRadius) {
                 let bonus = Math.floor(Math.random() * 11) * 10 + 50; 
                 score += bonus;
                 clover = null;
                 if (cloverTimeout) clearTimeout(cloverTimeout);
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = `🍀 대형 클로버 획득! 잭팟 보너스 +${bonus}점!`; 
+                effectDisplay.innerText = `🍀 초대형 클로버 획득! 잭팟 보너스 +${bonus}점!`; 
                 effectDisplay.style.color = "#2ecc71";
                 updateGameDifficulty();
                 resetHungerTimer();
@@ -807,14 +809,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v27)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v28)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v27")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v28")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v27", path=component_dir)
+snake_game = components.declare_component("snake_v28", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -851,7 +853,7 @@ def save_score(nickname, score):
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
 st.title("🐍 TJ Random Speed Rush 🎮 ")
-st.info("⬅⬆➡ 10초 카운트다운! 맵 끝단에 열리는 **대형 🕳️ 블랙홀(워프 게이트)**을 전략적으로 활용해 보세요!")
+st.info(" 최고의 점수에 도전해봐요!! 게임가이드 정독 필수 !! ")
 
 col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
 
@@ -897,7 +899,7 @@ with col2:
             
             | 아이템 | 효과 설명 |
             | :--- | :--- |
-            | 🍀 **대형 클로버** | 몸통이 **30칸**이 될 때 딱 한 번 **맵 정중앙**에 대형 사이즈로 나타납니다! (50~150점 랜덤 획득, **2초 후 소멸**) |
+            | 🍀 **초대형 클로버** | 몸통이 **30칸**이 될 때 딱 한 번 **맵 정중앙**에 화면 절반만 한 크기로 등장합니다! 스치기만 해도 50~150점을 랜덤으로 획득! (**2초 후 소멸**) |
             | 🍎 **사과** | 점수 **+50점** 획득 |
             | 🍓 **딸기** | 점수 **+100점** 획득 |
             | 🍌 **바나나** | 5초간 속도 **대폭 감소** |
