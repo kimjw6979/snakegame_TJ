@@ -5,24 +5,8 @@ import os
 import time
 import datetime
 
-# 페이지 설정 (사이드바는 닫힌 상태로 시작)
-st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide", initial_sidebar_state="collapsed")
-
-# -------------------------------------------------------------
-# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS] - 🌟 관리자 버튼 완벽 복구!
-# -------------------------------------------------------------
-hide_menu_style = """
-    <style>
-    /* 우측 상단의 Deploy, 깃허브, Share 아이콘 등만 콕 집어서 숨기기 */
-    .stAppDeployButton {display: none !important;}
-    [data-testid="stToolbar"] {display: none !important;}
-    #MainMenu {display: none !important;}
-    
-    /* 하단 Streamlit 워터마크 숨기기 */
-    footer {display: none !important;}
-    </style>
-    """
-st.markdown(hide_menu_style, unsafe_allow_html=True)
+# 페이지 설정 (사이드바 등 모든 기본 기능 100% 정상 작동)
+st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
 
 # -------------------------------------------------------------
 # 🎮 [HTML/JS 게임 엔진 생성]
@@ -111,7 +95,9 @@ GAME_HTML = """
         let warpScheduleTimeout = null;
         let hitWarpCooldown = 0; 
 
-        // 🌟 수정됨: 대형 클로버(파먹기) 관련 변수
+        // 🌟 버그 수정: 다중 키입력 방지용 변수 (의문사 방지)
+        let changingDirection = false;
+
         let cloverSpawned = false;
         let isGiantCloverActive = false;
         let giantCloverBlocks = [];
@@ -133,6 +119,7 @@ GAME_HTML = """
             snake = [{ x: 300, y: 300 }]; dx = 0; dy = -gridSize;
             score = 0; lives = 3; isGameOver = false;
             baseSpeed = 100; speedMod = 1; isReversedControls = false; snakeSizeMod = 1;
+            changingDirection = false;
             
             hungerTimer = 10;
             if (hungerInterval) clearInterval(hungerInterval);
@@ -248,9 +235,12 @@ GAME_HTML = """
             gameInterval = setInterval(main, baseSpeed * speedMod);
         }
 
+        // 🌟 수정됨: 난이도(속도) 대폭 완화
         function updateGameDifficulty() {
             document.getElementById("currentScore").innerText = score;
-            baseSpeed = Math.max(40, 100 - Math.floor(score / 50) * 5);
+            
+            // 기존: 50점당 5ms 감소 -> 변경: 50점당 0.5ms 감소
+            baseSpeed = Math.max(40, 100 - (score / 50) * 0.5);
             updateSpeed();
             
             let targetFoodCount = Math.min(5, 1 + Math.floor(score / 100));
@@ -330,6 +320,9 @@ GAME_HTML = """
         }
 
         function main() {
+            // 🌟 버그 수정: 1프레임당 방향키 조작 제한 해제 (다음 프레임이 시작되었으므로)
+            changingDirection = false; 
+            
             if (checkCollision()) { handleDeath(); return; }
             clearCanvas(); 
             
@@ -348,7 +341,7 @@ GAME_HTML = """
             drawWarpGate(); 
             drawNormalFoods(); 
             drawHiddenFruits(); 
-            drawGiantClover(); // 🌟 대형 클로버(파먹기) 렌더링
+            drawGiantClover(); 
             drawBonusFoods(); 
             advanceSnake(); 
             drawSnake();
@@ -389,7 +382,6 @@ GAME_HTML = """
             if(gridTimeout) clearTimeout(gridTimeout);
             isGridTime = false;
             
-            // 초기화 시 클로버 삭제
             isGiantCloverActive = false;
             giantCloverBlocks = [];
             if(cloverTimeout) clearTimeout(cloverTimeout);
@@ -494,22 +486,25 @@ GAME_HTML = """
             });
         }
 
-        // 🌟 수정됨: 파먹는 10x10 격자형 대형 클로버 그리기
         function drawGiantClover() {
             if (isGiantCloverActive) {
-                // 1. 베이스로 깔아주는 거대한 이모지 (240px 크기로 정중앙에 배치)
-                ctx.font = "240px Arial"; 
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(200, 200, 200, 200);
+                ctx.clip();
+                
+                ctx.font = "200px Arial"; 
                 ctx.textAlign = "center"; 
                 ctx.textBaseline = "middle";
-                ctx.fillText("🍀", 300, 305); // Y를 아주 살짝 조정해 정중앙 200x200 픽셀 구역과 일치시킴
+                ctx.fillText("🍀", 300, 315); 
                 
-                // 2. 뱀이 "파먹은(배열에 없는)" 구역은 배경색(#34495e)으로 덮어서 지워버리는 연출!
+                ctx.restore(); 
+                
                 ctx.fillStyle = "#34495e";
                 for (let r = 0; r < 10; r++) {
                     for (let c = 0; c < 10; c++) {
                         let bx = 200 + c * gridSize;
                         let by = 200 + r * gridSize;
-                        // 현재 giantCloverBlocks 배열에 남아있지 않으면 파먹힌 것!
                         let isEaten = !giantCloverBlocks.some(b => b.x === bx && b.y === by);
                         if (isEaten) {
                             ctx.fillRect(bx, by, gridSize, gridSize);
@@ -561,7 +556,6 @@ GAME_HTML = """
             let hitRange = (snakeSizeMod > 1.2) ? gridSize : 0;
             let ateSomething = false;
 
-            // 🌐 250점 돌파 격자 이벤트!
             if (score >= 250 && !gridTriggered) {
                 gridTriggered = true;
                 isGridTime = true;
@@ -576,13 +570,11 @@ GAME_HTML = """
                 }, 10000); 
             }
 
-            // 🍀 🌟 수정됨: 1x1 격자 100개로 이루어진 파먹는 대형 클로버 등장 로직
             if (snake.length >= 30 && !cloverSpawned) {
                 cloverSpawned = true;
                 isGiantCloverActive = true;
                 giantCloverBlocks = [];
                 
-                // 200x200 크기 (x: 200~380, y: 200~380) 공간에 10x10 = 100개의 먹이 블록 생성
                 for (let r = 0; r < 10; r++) {
                     for (let c = 0; c < 10; c++) {
                         giantCloverBlocks.push({ x: 200 + c * gridSize, y: 200 + r * gridSize });
@@ -590,7 +582,7 @@ GAME_HTML = """
                 }
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🍀 정중앙에 200x200 대형 클로버밭 등장! (5초 후 사라집니다!)"; 
+                effectDisplay.innerText = "🍀 정중앙에 대형 클로버밭 등장! 마음껏 갉아먹으세요! (5초)"; 
                 effectDisplay.style.color = "#2ecc71";
 
                 cloverTimeout = setTimeout(() => {
@@ -599,17 +591,15 @@ GAME_HTML = """
                     if (!isGameOver && !isPaused && !isGridTime && !isBonusTime) {
                         effectDisplay.innerText = "";
                     }
-                }, 5000); // 5초 유지
+                }, 5000); 
             }
 
-            // 🍀 🌟 수정됨: 대형 클로버 1칸씩 파먹기 처리
             if (isGiantCloverActive) {
-                // 배열을 거꾸로 순회하며 충돌한 블록(1x1) 지우기
                 for (let i = giantCloverBlocks.length - 1; i >= 0; i--) {
                     let f = giantCloverBlocks[i];
                     if (Math.abs(f.x - head.x) <= hitRange && Math.abs(f.y - head.y) <= hitRange) {
-                        score += 10; // 파먹을 때마다 10점 상승
-                        giantCloverBlocks.splice(i, 1); // 배열에서 삭제 (파먹힘)
+                        score += 10; 
+                        giantCloverBlocks.splice(i, 1); 
                         updateGameDifficulty();
                         resetHungerTimer();
                         ateSomething = true;
@@ -617,7 +607,6 @@ GAME_HTML = """
                 }
             }
 
-            // 🌟 보너스 별 획득 처리
             if (isBonusTime) {
                 for (let i = bonusFoods.length - 1; i >= 0; i--) {
                     let f = bonusFoods[i];
@@ -657,7 +646,6 @@ GAME_HTML = """
                 snake.pop(); 
             }
             
-            // 🌟 500점 단위 돌파 보너스 타임
             if (score >= nextBonusScore && !isBonusTime) {
                 let spawnCount = 40; 
                 if (nextBonusScore === 1000) spawnCount = 50;
@@ -777,22 +765,30 @@ GAME_HTML = """
             return newPos;
         }
         
+        // 🌟 버그 수정: 억울하게 죽는 충돌 판정 완벽 개선!
         function checkCollision() { 
             const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-            for (let i = 0; i < snake.length; i++) { if (snake[i].x === head.x && snake[i].y === head.y) return true; } 
-            return head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height; 
+            
+            // 1. 벽 충돌 판정
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) return true; 
+            
+            // 2. 자기 몸통 충돌 판정 
+            // (맨 끝 꼬리[length-1]는 지렁이가 전진하면 비워지므로 충돌 검사에서 제외해야 억울하게 안 죽습니다!)
+            for (let i = 0; i < snake.length - 1; i++) { 
+                if (snake[i].x === head.x && snake[i].y === head.y) return true; 
+            } 
+            return false; 
         }
 
         window.addEventListener("keydown", function(e) {
             if (e.keyCode === 32 && !isStarted && !isCountingDown) { e.preventDefault(); triggerStart(); return; }
             
-            // ⏸️ 일시정지 로직 (P 키)
             if (e.keyCode === 80) {
                 if (isCountingDown || isGameOver || !isStarted) return;
                 
                 if (!isPaused && !pauseUsed) {
                     isPaused = true;
-                    pauseUsed = true; // 게임당 1회 제한
+                    pauseUsed = true; 
                     clearInterval(gameInterval);
                     if (hungerInterval) clearInterval(hungerInterval);
                     
@@ -817,6 +813,10 @@ GAME_HTML = """
             }
 
             if (isCountingDown || isGameOver || isPaused) return;
+            
+            // 🌟 버그 수정: 아주 빠르게 키를 두 번 눌러서 자기 목을 깨물고 죽는 현상 차단
+            if (changingDirection) return;
+
             if([37, 38, 39, 40, 32, 80].indexOf(e.keyCode) > -1) e.preventDefault(); 
             
             let LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
@@ -825,10 +825,11 @@ GAME_HTML = """
                 LEFT = 39; RIGHT = 37; UP = 40; DOWN = 38;
             }
             
-            if (e.keyCode === LEFT && dx === 0) { dx = -gridSize; dy = 0; }
-            if (e.keyCode === UP && dy === 0) { dx = 0; dy = -gridSize; }
-            if (e.keyCode === RIGHT && dx === 0) { dx = gridSize; dy = 0; }
-            if (e.keyCode === DOWN && dy === 0) { dx = 0; dy = gridSize; }
+            // 방향이 유효하게 바뀌었을 때만 changingDirection을 true로 설정
+            if (e.keyCode === LEFT && dx === 0) { dx = -gridSize; dy = 0; changingDirection = true; }
+            if (e.keyCode === UP && dy === 0) { dx = 0; dy = -gridSize; changingDirection = true; }
+            if (e.keyCode === RIGHT && dx === 0) { dx = gridSize; dy = 0; changingDirection = true; }
+            if (e.keyCode === DOWN && dy === 0) { dx = 0; dy = gridSize; changingDirection = true; }
         }, false);
     </script>
 </body>
@@ -836,14 +837,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v29)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v30)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v29")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v30")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v29", path=component_dir)
+snake_game = components.declare_component("snake_v30", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -911,7 +912,7 @@ with col2:
             * **게임 시작/부활**: 닉네임 입력 후 `[Space Bar]` 입력
             * **일시정지**: 게임 중 위급할 때 **`[P]` 키**를 누르면 일시정지됩니다. (단, 1게임당 **딱 1번만** 사용 가능!)
             * **난이도 상승 (Speed Rush!)**: 
-              * 점수가 **50점** 오를 때마다 **속도가 점점 빨라집니다.**
+              * 점수가 **50점** 오를 때마다 속도가 **0.5씩 아주 조금씩** 빨라집니다.
               * 점수가 **100점** 오를 때마다 기본 먹이 개수가 증가합니다. (최대 5개)
             * **목숨(하트) 시스템**: 총 **3개(❤️❤️❤️)**의 목숨이 주어집니다.
               * 충돌 시 점수 감점 없이 **몸통만 3칸 줄어든 채** 중앙에서 부활합니다.
