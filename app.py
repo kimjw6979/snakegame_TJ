@@ -5,8 +5,23 @@ import os
 import time
 import datetime
 
-# 페이지 설정 (사이드바 등 모든 기본 기능 100% 정상 작동)
+# 페이지 설정
 st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
+
+# -------------------------------------------------------------
+# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS]
+# -------------------------------------------------------------
+hide_menu_style = """
+    <style>
+    #MainMenu {visibility: hidden;} /* 우측 햄버거 메뉴 및 Share 숨기기 */
+    header {visibility: hidden;}    /* 상단 GitHub, Edit 연필 아이콘 툴바 숨기기 */
+    footer {visibility: hidden;}    /* 하단 Streamlit 워터마크 숨기기 */
+    
+    /* 체크모양 버튼 테두리 없애서 글자처럼 보이게 만들기 */
+    button[title="View fullscreen"] {visibility: hidden;}
+    </style>
+    """
+st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
 # 🎮 [HTML/JS 게임 엔진 생성]
@@ -95,7 +110,7 @@ GAME_HTML = """
         let warpScheduleTimeout = null;
         let hitWarpCooldown = 0; 
 
-        // 🌟 버그 수정: 다중 키입력 방지용 변수 (의문사 방지)
+        // 🌟 다중 키입력 방지용 변수 (의문사 방지)
         let changingDirection = false;
 
         let cloverSpawned = false;
@@ -235,11 +250,10 @@ GAME_HTML = """
             gameInterval = setInterval(main, baseSpeed * speedMod);
         }
 
-        // 🌟 수정됨: 난이도(속도) 대폭 완화
+        // 난이도(속도) 대폭 완화
         function updateGameDifficulty() {
             document.getElementById("currentScore").innerText = score;
             
-            // 기존: 50점당 5ms 감소 -> 변경: 50점당 0.5ms 감소
             baseSpeed = Math.max(40, 100 - (score / 50) * 0.5);
             updateSpeed();
             
@@ -320,7 +334,6 @@ GAME_HTML = """
         }
 
         function main() {
-            // 🌟 버그 수정: 1프레임당 방향키 조작 제한 해제 (다음 프레임이 시작되었으므로)
             changingDirection = false; 
             
             if (checkCollision()) { handleDeath(); return; }
@@ -765,15 +778,11 @@ GAME_HTML = """
             return newPos;
         }
         
-        // 🌟 버그 수정: 억울하게 죽는 충돌 판정 완벽 개선!
         function checkCollision() { 
             const head = { x: snake[0].x + dx, y: snake[0].y + dy };
             
-            // 1. 벽 충돌 판정
             if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) return true; 
             
-            // 2. 자기 몸통 충돌 판정 
-            // (맨 끝 꼬리[length-1]는 지렁이가 전진하면 비워지므로 충돌 검사에서 제외해야 억울하게 안 죽습니다!)
             for (let i = 0; i < snake.length - 1; i++) { 
                 if (snake[i].x === head.x && snake[i].y === head.y) return true; 
             } 
@@ -814,7 +823,6 @@ GAME_HTML = """
 
             if (isCountingDown || isGameOver || isPaused) return;
             
-            // 🌟 버그 수정: 아주 빠르게 키를 두 번 눌러서 자기 목을 깨물고 죽는 현상 차단
             if (changingDirection) return;
 
             if([37, 38, 39, 40, 32, 80].indexOf(e.keyCode) > -1) e.preventDefault(); 
@@ -825,7 +833,6 @@ GAME_HTML = """
                 LEFT = 39; RIGHT = 37; UP = 40; DOWN = 38;
             }
             
-            // 방향이 유효하게 바뀌었을 때만 changingDirection을 true로 설정
             if (e.keyCode === LEFT && dx === 0) { dx = -gridSize; dy = 0; changingDirection = true; }
             if (e.keyCode === UP && dy === 0) { dx = 0; dy = -gridSize; changingDirection = true; }
             if (e.keyCode === RIGHT && dx === 0) { dx = gridSize; dy = 0; changingDirection = true; }
@@ -837,14 +844,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v30)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v31)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v30")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v31")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v30", path=component_dir)
+snake_game = components.declare_component("snake_v31", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -881,7 +888,7 @@ def save_score(nickname, score):
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
 st.title("🐍 TJ Random Speed Rush 🎮 ")
-st.info(" 🏆 최고의 점수에 도전해보자구요!! 게임가이드 보고 시작하기! ")
+st.info(" 🏆최고의 점수에 도전해보자구요!! 게임가이드 보고 시작하기!! ")
 
 col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
 
@@ -949,7 +956,39 @@ with col2:
                * 갇힐 위기라면 벽에 박으세요! 죽어도 점수는 깎이지 않고 **몸통만 3칸 다이어트** 됩니다.
             """)
 
-    st.subheader("🏆 실시간 TOP 10")
+    # ---------------------------------------------------------
+    # 🏆 실시간 TOP 10 & 🛠️ 숨겨진 관리자 도구 (✅ 버튼)
+    # ---------------------------------------------------------
+    if "admin_mode" not in st.session_state:
+        st.session_state.admin_mode = False
+
+    title_col, btn_col = st.columns([0.85, 0.15])
+    with title_col:
+        st.subheader("🏆 실시간 TOP 10")
+    with btn_col:
+        st.write("") # 약간 아래로 내리기 위한 여백
+        if st.button("✅", help="관리자 도구"):
+            st.session_state.admin_mode = not st.session_state.admin_mode
+
+    # 관리자 버튼 클릭 시 나타나는 비밀 메뉴
+    if st.session_state.admin_mode:
+        with st.container():
+            st.markdown("#### 🛠️ 관리자 도구")
+            admin_password = st.text_input("관리자 비밀번호를 입력하세요", type="password")
+            if admin_password == "880610":
+                st.success("✅ 관리자 인증 완료!")
+                if st.button("🚨 랭킹 데이터 전체 초기화"):
+                    if os.path.exists(SCORE_FILE):
+                        os.remove(SCORE_FILE)
+                        st.success("데이터가 성공적으로 삭제되었습니다.")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.info("삭제할 랭킹 데이터가 없습니다.")
+            elif admin_password != "":
+                st.error("❌ 비밀번호가 틀렸습니다.")
+            st.markdown("---")
+
     scores = load_scores()
     
     if not scores:
@@ -969,23 +1008,3 @@ with col2:
         board_html += "</div>"
         
         st.markdown(board_html, unsafe_allow_html=True)
-
-
-# -------------------------------------------------------------
-# 🛠️ 관리자 도구 (비밀번호: 880610)
-# -------------------------------------------------------------
-st.sidebar.title("🛠️ 관리자 도구")
-admin_password = st.sidebar.text_input("관리자 비밀번호를 입력하세요", type="password")
-
-if admin_password == "880610":
-    st.sidebar.success("✅ 관리자 인증 완료!")
-    if st.sidebar.button("🚨 랭킹 데이터 전체 초기화"):
-        if os.path.exists(SCORE_FILE):
-            os.remove(SCORE_FILE)
-            st.sidebar.success("데이터가 성공적으로 삭제되었습니다.")
-            time.sleep(1)
-            st.rerun()
-        else:
-            st.sidebar.info("삭제할 랭킹 데이터가 없습니다.")
-elif admin_password != "":
-    st.sidebar.error("❌ 비밀번호가 틀렸습니다.")
