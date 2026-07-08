@@ -5,20 +5,27 @@ import os
 import time
 import datetime
 
-# 페이지 설정
-st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
+# 페이지 설정 (🌟 수정됨: 사이드바 기본 상태를 '닫힘'으로 설정하여 유저들에게 숨김!)
+st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide", initial_sidebar_state="collapsed")
 
 # -------------------------------------------------------------
-# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS] (사이드바 버튼은 유지!)
+# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS] - 완벽 수정판!
 # -------------------------------------------------------------
 hide_menu_style = """
     <style>
-    /* 우측 상단 툴바(Share, 연필, 깃허브 아이콘 등)만 정확히 숨기기 */
-    [data-testid="stToolbar"] {visibility: hidden !important;}
-    /* 우측 햄버거 메뉴 숨기기 */
+    /* 1. 우측 상단 Deploy, GitHub, Share, 메뉴 버튼 등 싹 다 숨기기 */
+    .stAppDeployButton {display: none !important;}
+    [data-testid="stToolbar"] {display: none !important;}
     #MainMenu {visibility: hidden !important;}
-    /* 하단 Streamlit 워터마크 숨기기 */
+    
+    /* 헤더 우측 영역 강제 비활성화 (Streamlit 업데이트 방어) */
+    header > div:last-child {display: none !important;} 
+    
+    /* 2. 하단 Streamlit 워터마크 숨기기 */
     footer {visibility: hidden !important;}
+    
+    /* 3. 좌측 관리자 도구 여는 사이드바 버튼(>)은 반드시 보이게 고정! */
+    [data-testid="collapsedControl"] {visibility: visible !important; display: flex !important;}
     </style>
     """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
@@ -802,14 +809,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v25)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v26)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v25")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v26")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v25", path=component_dir)
+snake_game = components.declare_component("snake_v26", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -846,7 +853,7 @@ def save_score(nickname, score):
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
 st.title("🐍 TJ Random Speed Rush 🎮 ")
-st.info("⬅⬆➡ 10초 카운트다운! 맵 끝단에 열리는 **대형 🕳️ 블랙홀(워프 게이트)**을 전략적으로 활용해 보세요!")
+st.info(" 최고의 점수에 도전해보자구요!! 게임가이드 보고 시작하기!! ")
 
 col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
 
