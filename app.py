@@ -5,27 +5,21 @@ import os
 import time
 import datetime
 
-# 페이지 설정 (🌟 수정됨: 사이드바 기본 상태를 '닫힘'으로 설정하여 유저들에게 숨김!)
-st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide", initial_sidebar_state="collapsed")
+# 페이지 설정 (기본 상태로 되돌려 사이드바 버튼이 정상적으로 나오게 합니다)
+st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
 
 # -------------------------------------------------------------
-# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS] - 완벽 수정판!
+# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS] - 안전한 수정판!
 # -------------------------------------------------------------
 hide_menu_style = """
     <style>
-    /* 1. 우측 상단 Deploy, GitHub, Share, 메뉴 버튼 등 싹 다 숨기기 */
+    /* 우측 상단 Deploy 버튼, 툴바 아이콘, 햄버거 메뉴만 정확히 콕 집어서 숨기기 */
     .stAppDeployButton {display: none !important;}
     [data-testid="stToolbar"] {display: none !important;}
     #MainMenu {visibility: hidden !important;}
     
-    /* 헤더 우측 영역 강제 비활성화 (Streamlit 업데이트 방어) */
-    header > div:last-child {display: none !important;} 
-    
-    /* 2. 하단 Streamlit 워터마크 숨기기 */
+    /* 하단 Streamlit 워터마크 숨기기 */
     footer {visibility: hidden !important;}
-    
-    /* 3. 좌측 관리자 도구 여는 사이드바 버튼(>)은 반드시 보이게 고정! */
-    [data-testid="collapsedControl"] {visibility: visible !important; display: flex !important;}
     </style>
     """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
@@ -496,10 +490,13 @@ GAME_HTML = """
             });
         }
 
+        // 🌟 수정됨: 대형 클로버 크기 2배(40px) 렌더링
         function drawClover() {
             if (clover) {
-                ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillText("🍀", clover.x + (gridSize / 2), clover.y + (gridSize / 2) + 2);
+                ctx.font = "40px Arial"; 
+                ctx.textAlign = "center"; 
+                ctx.textBaseline = "middle";
+                ctx.fillText("🍀", clover.x + gridSize, clover.y + gridSize + 2);
             }
         }
         
@@ -560,30 +557,31 @@ GAME_HTML = """
                 }, 10000); 
             }
 
-            // 🍀 클로버 등장 로직
-            if (snake.length >= 35 && !cloverSpawned) {
+            // 🍀 🌟 수정됨: 대형 클로버 등장 로직 (몸통 30칸 달성 시 맵 정중앙에 고정 스폰)
+            if (snake.length >= 30 && !cloverSpawned) {
                 cloverSpawned = true;
-                let pos = generateValidPosition();
-                clover = { x: pos.x, y: pos.y };
+                clover = { x: 280, y: 280 }; // 600x600 맵의 정중앙에 40x40 크기로 배치
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🍀 행운의 클로버 등장! (2초 후 사라집니다!)"; 
+                effectDisplay.innerText = "🍀 정중앙에 대형 클로버 등장! (2초 후 사라집니다!)"; 
                 effectDisplay.style.color = "#2ecc71";
 
                 cloverTimeout = setTimeout(() => {
                     clover = null;
-                }, 2000);
+                }, 2000); // 2초 유지 (극한의 타이밍!)
             }
 
-            // 🍀 클로버 획득 처리
-            if (clover && Math.abs(clover.x - head.x) <= hitRange && Math.abs(clover.y - head.y) <= hitRange) {
+            // 🍀 🌟 수정됨: 대형 클로버 획득 처리 (2x2 공간 충돌 판정 적용)
+            if (clover && 
+                head.x >= clover.x && head.x < clover.x + 2*gridSize &&
+                head.y >= clover.y && head.y < clover.y + 2*gridSize) {
                 let bonus = Math.floor(Math.random() * 11) * 10 + 50; 
                 score += bonus;
                 clover = null;
                 if (cloverTimeout) clearTimeout(cloverTimeout);
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = `🍀 클로버 획득! 잭팟 보너스 +${bonus}점!`; 
+                effectDisplay.innerText = `🍀 대형 클로버 획득! 잭팟 보너스 +${bonus}점!`; 
                 effectDisplay.style.color = "#2ecc71";
                 updateGameDifficulty();
                 resetHungerTimer();
@@ -809,14 +807,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v26)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v27)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v26")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v27")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v26", path=component_dir)
+snake_game = components.declare_component("snake_v27", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -853,7 +851,7 @@ def save_score(nickname, score):
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
 st.title("🐍 TJ Random Speed Rush 🎮 ")
-st.info(" 최고의 점수에 도전해보자구요!! 게임가이드 보고 시작하기!! ")
+st.info("⬅⬆➡ 10초 카운트다운! 맵 끝단에 열리는 **대형 🕳️ 블랙홀(워프 게이트)**을 전략적으로 활용해 보세요!")
 
 col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
 
@@ -899,7 +897,7 @@ with col2:
             
             | 아이템 | 효과 설명 |
             | :--- | :--- |
-            | 🍀 **클로버** | ❓상자가 아닌, 몸통이 **35칸**이 될 때만 딱 한 번 나타납니다! (50~150점 랜덤 획득, **2초 후 소멸**) |
+            | 🍀 **대형 클로버** | 몸통이 **30칸**이 될 때 딱 한 번 **맵 정중앙**에 대형 사이즈로 나타납니다! (50~150점 랜덤 획득, **2초 후 소멸**) |
             | 🍎 **사과** | 점수 **+50점** 획득 |
             | 🍓 **딸기** | 점수 **+100점** 획득 |
             | 🍌 **바나나** | 5초간 속도 **대폭 감소** |
