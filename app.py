@@ -5,21 +5,21 @@ import os
 import time
 import datetime
 
-# 페이지 설정
-st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
+# 페이지 설정 (사이드바는 닫힌 상태로 시작)
+st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide", initial_sidebar_state="collapsed")
 
 # -------------------------------------------------------------
-# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS]
+# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS] - 🌟 관리자 버튼 완벽 복구!
 # -------------------------------------------------------------
 hide_menu_style = """
     <style>
-    /* 우측 상단 Deploy 버튼, 툴바 아이콘, 햄버거 메뉴만 정확히 콕 집어서 숨기기 */
+    /* 우측 상단의 Deploy, 깃허브, Share 아이콘 등만 콕 집어서 숨기기 */
     .stAppDeployButton {display: none !important;}
     [data-testid="stToolbar"] {display: none !important;}
-    #MainMenu {visibility: hidden !important;}
+    #MainMenu {display: none !important;}
     
     /* 하단 Streamlit 워터마크 숨기기 */
-    footer {visibility: hidden !important;}
+    footer {display: none !important;}
     </style>
     """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
@@ -111,9 +111,10 @@ GAME_HTML = """
         let warpScheduleTimeout = null;
         let hitWarpCooldown = 0; 
 
-        // 🍀 클로버, ⏸️ 일시정지, 🌟 보너스 타임, 🌐 격자 이벤트 변수
-        let clover = null;
+        // 🌟 수정됨: 대형 클로버(파먹기) 관련 변수
         let cloverSpawned = false;
+        let isGiantCloverActive = false;
+        let giantCloverBlocks = [];
         let cloverTimeout = null;
         
         let isPaused = false;
@@ -136,14 +137,14 @@ GAME_HTML = """
             hungerTimer = 10;
             if (hungerInterval) clearInterval(hungerInterval);
             
-            clover = null;
             cloverSpawned = false;
+            isGiantCloverActive = false;
+            giantCloverBlocks = [];
             if (cloverTimeout) clearTimeout(cloverTimeout);
             
             isPaused = false;
             pauseUsed = false;
             
-            // 보너스 및 격자 이벤트 초기화
             nextBonusScore = 500;
             isBonusTime = false;
             bonusFoods = [];
@@ -171,7 +172,7 @@ GAME_HTML = """
             document.getElementById("currentScore").innerText = score;
             document.getElementById("heartDisplay").innerText = "❤️".repeat(lives);
             document.getElementById("foodTimerDisplay").innerText = hungerTimer;
-            if (!isBonusTime && !isGridTime) document.getElementById("itemEffect").innerText = "";
+            if (!isBonusTime && !isGridTime && !isGiantCloverActive) document.getElementById("itemEffect").innerText = "";
         }
 
         document.getElementById("startBtn").addEventListener("click", triggerStart);
@@ -220,7 +221,7 @@ GAME_HTML = """
                     effectDisplay.style.color = "#e74c3c";
                     
                     setTimeout(() => { 
-                        if(effectDisplay.innerText.includes("아사") && !isBonusTime && !isGridTime) {
+                        if(effectDisplay.innerText.includes("아사") && !isBonusTime && !isGridTime && !isGiantCloverActive) {
                             effectDisplay.innerText = ""; 
                         }
                     }, 2000);
@@ -332,10 +333,8 @@ GAME_HTML = """
             if (checkCollision()) { handleDeath(); return; }
             clearCanvas(); 
             
-            // 🌐 250점 돌파 격자 효과
             if (isGridTime) drawGrid();
             
-            // 🌟 보너스 타임 텍스트 배경 효과
             if (isBonusTime) {
                 ctx.fillStyle = "rgba(241, 196, 15, 0.1)"; 
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -349,7 +348,7 @@ GAME_HTML = """
             drawWarpGate(); 
             drawNormalFoods(); 
             drawHiddenFruits(); 
-            drawClover();
+            drawGiantClover(); // 🌟 대형 클로버(파먹기) 렌더링
             drawBonusFoods(); 
             advanceSnake(); 
             drawSnake();
@@ -389,6 +388,11 @@ GAME_HTML = """
             
             if(gridTimeout) clearTimeout(gridTimeout);
             isGridTime = false;
+            
+            // 초기화 시 클로버 삭제
+            isGiantCloverActive = false;
+            giantCloverBlocks = [];
+            if(cloverTimeout) clearTimeout(cloverTimeout);
             
             updateUI();
             
@@ -490,14 +494,28 @@ GAME_HTML = """
             });
         }
 
-        // 🌟 초대형 클로버 그리기 (크기 240px로 뻥튀기!)
-        function drawClover() {
-            if (clover) {
+        // 🌟 수정됨: 파먹는 10x10 격자형 대형 클로버 그리기
+        function drawGiantClover() {
+            if (isGiantCloverActive) {
+                // 1. 베이스로 깔아주는 거대한 이모지 (240px 크기로 정중앙에 배치)
                 ctx.font = "240px Arial"; 
                 ctx.textAlign = "center"; 
                 ctx.textBaseline = "middle";
-                // 정중앙 좌표(300, 300)에 딱 맞춰 렌더링
-                ctx.fillText("🍀", clover.x, clover.y);
+                ctx.fillText("🍀", 300, 305); // Y를 아주 살짝 조정해 정중앙 200x200 픽셀 구역과 일치시킴
+                
+                // 2. 뱀이 "파먹은(배열에 없는)" 구역은 배경색(#34495e)으로 덮어서 지워버리는 연출!
+                ctx.fillStyle = "#34495e";
+                for (let r = 0; r < 10; r++) {
+                    for (let c = 0; c < 10; c++) {
+                        let bx = 200 + c * gridSize;
+                        let by = 200 + r * gridSize;
+                        // 현재 giantCloverBlocks 배열에 남아있지 않으면 파먹힌 것!
+                        let isEaten = !giantCloverBlocks.some(b => b.x === bx && b.y === by);
+                        if (isEaten) {
+                            ctx.fillRect(bx, by, gridSize, gridSize);
+                        }
+                    }
+                }
             }
         }
         
@@ -543,7 +561,7 @@ GAME_HTML = """
             let hitRange = (snakeSizeMod > 1.2) ? gridSize : 0;
             let ateSomething = false;
 
-            // 🌐 250점 돌파 격자 이벤트! (10초 유지)
+            // 🌐 250점 돌파 격자 이벤트!
             if (score >= 250 && !gridTriggered) {
                 gridTriggered = true;
                 isGridTime = true;
@@ -554,40 +572,49 @@ GAME_HTML = """
                 
                 gridTimeout = setTimeout(() => {
                     isGridTime = false;
-                    if (!isGameOver && !isPaused && !isBonusTime) effectDisplay.innerText = "";
+                    if (!isGameOver && !isPaused && !isBonusTime && !isGiantCloverActive) effectDisplay.innerText = "";
                 }, 10000); 
             }
 
-            // 🍀 🌟 초대형 클로버 등장 로직 (몸통 30칸, 정중앙)
+            // 🍀 🌟 수정됨: 1x1 격자 100개로 이루어진 파먹는 대형 클로버 등장 로직
             if (snake.length >= 30 && !cloverSpawned) {
                 cloverSpawned = true;
-                // x:300, y:300 정중앙 스폰, 반경 100px (가로세로 200px) 충돌 허용!
-                clover = { x: 300, y: 300, hitRadius: 100 }; 
+                isGiantCloverActive = true;
+                giantCloverBlocks = [];
+                
+                // 200x200 크기 (x: 200~380, y: 200~380) 공간에 10x10 = 100개의 먹이 블록 생성
+                for (let r = 0; r < 10; r++) {
+                    for (let c = 0; c < 10; c++) {
+                        giantCloverBlocks.push({ x: 200 + c * gridSize, y: 200 + r * gridSize });
+                    }
+                }
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🍀 정중앙에 초대형 클로버 등장! (2초 후 사라집니다!)"; 
+                effectDisplay.innerText = "🍀 정중앙에 200x200 대형 클로버밭 등장! (5초 후 사라집니다!)"; 
                 effectDisplay.style.color = "#2ecc71";
 
                 cloverTimeout = setTimeout(() => {
-                    clover = null;
-                }, 2000); 
+                    isGiantCloverActive = false;
+                    giantCloverBlocks = [];
+                    if (!isGameOver && !isPaused && !isGridTime && !isBonusTime) {
+                        effectDisplay.innerText = "";
+                    }
+                }, 5000); // 5초 유지
             }
 
-            // 🍀 🌟 초대형 클로버 획득 처리 (충돌 범위를 엄청나게 넓혀서 스치기만 해도 획득!)
-            if (clover && 
-                head.x >= clover.x - clover.hitRadius && head.x < clover.x + clover.hitRadius &&
-                head.y >= clover.y - clover.hitRadius && head.y < clover.y + clover.hitRadius) {
-                let bonus = Math.floor(Math.random() * 11) * 10 + 50; 
-                score += bonus;
-                clover = null;
-                if (cloverTimeout) clearTimeout(cloverTimeout);
-                
-                const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = `🍀 초대형 클로버 획득! 잭팟 보너스 +${bonus}점!`; 
-                effectDisplay.style.color = "#2ecc71";
-                updateGameDifficulty();
-                resetHungerTimer();
-                ateSomething = true;
+            // 🍀 🌟 수정됨: 대형 클로버 1칸씩 파먹기 처리
+            if (isGiantCloverActive) {
+                // 배열을 거꾸로 순회하며 충돌한 블록(1x1) 지우기
+                for (let i = giantCloverBlocks.length - 1; i >= 0; i--) {
+                    let f = giantCloverBlocks[i];
+                    if (Math.abs(f.x - head.x) <= hitRange && Math.abs(f.y - head.y) <= hitRange) {
+                        score += 10; // 파먹을 때마다 10점 상승
+                        giantCloverBlocks.splice(i, 1); // 배열에서 삭제 (파먹힘)
+                        updateGameDifficulty();
+                        resetHungerTimer();
+                        ateSomething = true;
+                    }
+                }
             }
 
             // 🌟 보너스 별 획득 처리
@@ -630,7 +657,7 @@ GAME_HTML = """
                 snake.pop(); 
             }
             
-            // 🌟 500점 단위 돌파 보너스 타임 (스케일링 적용, 10초 유지)
+            // 🌟 500점 단위 돌파 보너스 타임
             if (score >= nextBonusScore && !isBonusTime) {
                 let spawnCount = 40; 
                 if (nextBonusScore === 1000) spawnCount = 50;
@@ -652,10 +679,10 @@ GAME_HTML = """
                 bonusTimeTimeout = setTimeout(() => {
                     isBonusTime = false;
                     bonusFoods = [];
-                    if (!isGameOver && !isPaused && !isGridTime) {
+                    if (!isGameOver && !isPaused && !isGridTime && !isGiantCloverActive) {
                         effectDisplay.innerText = "";
                     }
-                }, 10000); // 10초
+                }, 10000); 
             }
         }
 
@@ -665,7 +692,7 @@ GAME_HTML = """
                 effectDisplay.innerText = "☁️ 구름! 3초간 눈앞이 캄캄해집니다!"; effectDisplay.style.color = "#7f8c8d";
                 document.getElementById("blindOverlay").style.display = "flex";
                 if(blindTimeout) clearTimeout(blindTimeout);
-                blindTimeout = setTimeout(() => { document.getElementById("blindOverlay").style.display = "none"; if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 3000);
+                blindTimeout = setTimeout(() => { document.getElementById("blindOverlay").style.display = "none"; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 3000);
             
             } else if (type === 'tunnel') {
                 effectDisplay.innerText = "🌀 터널! 지렁이 방향이 거꾸로 뒤집힙니다!"; effectDisplay.style.color = "#9b59b6";
@@ -683,7 +710,7 @@ GAME_HTML = """
                 effectDisplay.innerText = "🍄 독버섯! 3초간 방향키가 반대로 조작됩니다!"; effectDisplay.style.color = "#e67e22";
                 isReversedControls = true;
                 if(controlTimeout) clearTimeout(controlTimeout);
-                controlTimeout = setTimeout(() => { isReversedControls = false; if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 3000);
+                controlTimeout = setTimeout(() => { isReversedControls = false; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 3000);
                 
             } else if (type === 'caterpillar') {
                 if (Math.random() < 0.5) {
@@ -694,18 +721,18 @@ GAME_HTML = """
                     snakeSizeMod = 0.5; 
                 }
                 if(sizeTimeout) clearTimeout(sizeTimeout);
-                sizeTimeout = setTimeout(() => { snakeSizeMod = 1; if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 5000);
+                sizeTimeout = setTimeout(() => { snakeSizeMod = 1; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
 
             } else if (type === 'bonus') {
                 score += 50; effectDisplay.innerText = "🍎 보너스 +50점!"; effectDisplay.style.color = "#f1c40f";
             } else if (type === 'slow') {
                 effectDisplay.innerText = "🐢 바나나! 느릿느릿~ (5초)"; effectDisplay.style.color = "#3498db";
                 speedMod = 1.6; updateSpeed();
-                setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 5000);
+                setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'fast') {
                 effectDisplay.innerText = "⚡ 포도! 아주 빠르게! (5초)"; effectDisplay.style.color = "#9b59b6";
                 speedMod = 0.5; updateSpeed();
-                setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 5000);
+                setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'penalty') {
                 score = Math.max(0, score - 30); effectDisplay.innerText = "💀 오렌지! 감점 -30점!"; effectDisplay.style.color = "#e74c3c";
             } else if (type === 'super') {
@@ -713,7 +740,7 @@ GAME_HTML = """
             }
             
             updateGameDifficulty(); 
-            setTimeout(() => { if(!['slow','fast','blind','reverse','caterpillar'].includes(type) && !isBonusTime && !isGridTime) effectDisplay.innerText = ""; }, 2500);
+            setTimeout(() => { if(!['slow','fast','blind','reverse','caterpillar'].includes(type) && !isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 2500);
         }
 
         function spawnHiddenFruit() {
@@ -809,14 +836,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v28)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v29)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v28")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v29")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v28", path=component_dir)
+snake_game = components.declare_component("snake_v29", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -853,7 +880,7 @@ def save_score(nickname, score):
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
 st.title("🐍 TJ Random Speed Rush 🎮 ")
-st.info(" 최고의 점수에 도전해봐요!! 게임가이드 정독 필수 !! ")
+st.info(" 최고의 점수에 도전해보자구요!! 게임가이드 보고 시작하기!! ")
 
 col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
 
@@ -899,7 +926,7 @@ with col2:
             
             | 아이템 | 효과 설명 |
             | :--- | :--- |
-            | 🍀 **초대형 클로버** | 몸통이 **30칸**이 될 때 딱 한 번 **맵 정중앙**에 화면 절반만 한 크기로 등장합니다! 스치기만 해도 50~150점을 랜덤으로 획득! (**2초 후 소멸**) |
+            | 🍀 **대형 클로버밭** | 몸통이 **30칸**이 될 때 딱 한 번 맵 정중앙에 화면 절반만 한 대형 클로버(10x10 격자)가 **5초간** 나타납니다. **지나가는 자리마다 클로버를 갉아먹으며 1칸당 10점씩 획득!** |
             | 🍎 **사과** | 점수 **+50점** 획득 |
             | 🍓 **딸기** | 점수 **+100점** 획득 |
             | 🍌 **바나나** | 5초간 속도 **대폭 감소** |
