@@ -5,8 +5,20 @@ import os
 import time
 import datetime
 
-# 페이지 설정
+# 기존에 있던 페이지 설정 코드
 st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
+
+# -------------------------------------------------------------
+# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS]
+# -------------------------------------------------------------
+hide_menu_style = """
+    <style>
+    #MainMenu {visibility: hidden;} /* 우측 햄버거 메뉴 및 Share 숨기기 */
+    header {visibility: hidden;}    /* 상단 GitHub, Edit 연필 아이콘 툴바 숨기기 */
+    footer {visibility: hidden;}    /* 하단 Streamlit 워터마크 숨기기 */
+    </style>
+    """
+st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
 # 🎮 [HTML/JS 게임 엔진 생성]
