@@ -5,17 +5,20 @@ import os
 import time
 import datetime
 
-# 기존에 있던 페이지 설정 코드
+# 페이지 설정
 st.set_page_config(page_title="TJ 꿈틀꿈틀", page_icon="🐍", layout="wide")
 
 # -------------------------------------------------------------
-# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS]
+# 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS] (사이드바 버튼은 유지!)
 # -------------------------------------------------------------
 hide_menu_style = """
     <style>
-    #MainMenu {visibility: hidden;} /* 우측 햄버거 메뉴 및 Share 숨기기 */
-    header {visibility: hidden;}    /* 상단 GitHub, Edit 연필 아이콘 툴바 숨기기 */
-    footer {visibility: hidden;}    /* 하단 Streamlit 워터마크 숨기기 */
+    /* 우측 상단 툴바(Share, 연필, 깃허브 아이콘 등)만 정확히 숨기기 */
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    /* 우측 햄버거 메뉴 숨기기 */
+    #MainMenu {visibility: hidden !important;}
+    /* 하단 Streamlit 워터마크 숨기기 */
+    footer {visibility: hidden !important;}
     </style>
     """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
@@ -314,7 +317,7 @@ GAME_HTML = """
         }
 
         function drawGrid() {
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.15)"; // 눈에 거슬리지 않는 반투명 흰색 선
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.15)"; 
             ctx.lineWidth = 1;
             for(let x = 0; x <= canvas.width; x += gridSize) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -333,7 +336,7 @@ GAME_HTML = """
             
             // 🌟 보너스 타임 텍스트 배경 효과
             if (isBonusTime) {
-                ctx.fillStyle = "rgba(241, 196, 15, 0.1)"; // 옅은 노란색 필터
+                ctx.fillStyle = "rgba(241, 196, 15, 0.1)"; 
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.font = "bold 100px 'Malgun Gothic'";
                 ctx.textAlign = "center";
@@ -346,7 +349,7 @@ GAME_HTML = """
             drawNormalFoods(); 
             drawHiddenFruits(); 
             drawClover();
-            drawBonusFoods(); // 보너스 타임 별 먹이 그리기
+            drawBonusFoods(); 
             advanceSnake(); 
             drawSnake();
         }
@@ -379,7 +382,6 @@ GAME_HTML = """
             snakeSizeMod = 1;
             if(sizeTimeout) clearTimeout(sizeTimeout);
             
-            // 보너스, 격자 타임 중 죽었을 때 초기화
             if(bonusTimeTimeout) clearTimeout(bonusTimeTimeout);
             isBonusTime = false;
             bonusFoods = [];
@@ -548,7 +550,7 @@ GAME_HTML = """
                 gridTimeout = setTimeout(() => {
                     isGridTime = false;
                     if (!isGameOver && !isPaused && !isBonusTime) effectDisplay.innerText = "";
-                }, 10000); // 10초
+                }, 10000); 
             }
 
             // 🍀 클로버 등장 로직
@@ -623,17 +625,15 @@ GAME_HTML = """
             
             // 🌟 500점 단위 돌파 보너스 타임 (스케일링 적용, 10초 유지)
             if (score >= nextBonusScore && !isBonusTime) {
-                // 점수 구간에 따라 스폰 개수 증가
-                let spawnCount = 40; // 500점 기본
+                let spawnCount = 40; 
                 if (nextBonusScore === 1000) spawnCount = 50;
                 else if (nextBonusScore === 1500) spawnCount = 60;
                 else if (nextBonusScore >= 2000) spawnCount = 80;
                 
-                nextBonusScore = Math.floor(score / 500) * 500 + 500; // 다음 목표 점수 갱신
+                nextBonusScore = Math.floor(score / 500) * 500 + 500; 
                 isBonusTime = true;
                 bonusFoods = [];
                 
-                // 지정된 개수만큼 보너스 먹이 스폰
                 for (let i = 0; i < spawnCount; i++) {
                     bonusFoods.push(generateValidPosition());
                 }
@@ -802,14 +802,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v24)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v25)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v24")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v25")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v24", path=component_dir)
+snake_game = components.declare_component("snake_v25", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -845,8 +845,8 @@ def save_score(nickname, score):
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("  🐍 TJ Random Speed Rush 🎮  ")
-st.info("  🏆 최고의 점수에 도전해봅시다! 일시정지 [P]키 1번 가능! 게임가이드 보고 시작해보기‼  ")
+st.title("🐍 TJ Random Speed Rush 🎮 ")
+st.info("⬅⬆➡ 10초 카운트다운! 맵 끝단에 열리는 **대형 🕳️ 블랙홀(워프 게이트)**을 전략적으로 활용해 보세요!")
 
 col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
 
