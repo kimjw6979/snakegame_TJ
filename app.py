@@ -104,11 +104,6 @@ GAME_HTML = """
         
         let hungerTimer = 10;
         let hungerInterval = null;
-        
-        let warpGate = { active: false, p1: {x: 0, y: 0}, p2: {x: 0, y: 0} };
-        let warpTimeout = null;
-        let warpScheduleTimeout = null;
-        let hitWarpCooldown = 0; 
 
         // 🌟 다중 키입력 방지용 변수 (의문사 방지)
         let changingDirection = false;
