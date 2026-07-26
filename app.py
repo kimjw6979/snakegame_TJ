@@ -31,34 +31,77 @@ GAME_HTML = """
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background-color: #2c3e50; color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 10px; height: 900px; overflow: hidden; }
+        body { 
+            display: flex; flex-direction: column; align-items: center; 
+            background-color: #2c3e50; color: white; 
+            font-family: 'Malgun Gothic', sans-serif; 
+            margin: 0; padding: 10px; height: 1100px; overflow: hidden; 
+            touch-action: manipulation; /* 모바일 더블탭 줌 방지 */
+        }
         
-        .canvas-container { position: relative; width: 600px; height: 600px; }
-        canvas { background-color: #34495e; border: 3px solid #ecf0f1; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
-        #blindOverlay { position: absolute; top: 3px; left: 3px; width: 600px; height: 600px; background-color: rgba(10, 15, 25, 0.98); display: none; pointer-events: none; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; color: #7f8c8d; z-index: 10; }
+        /* 모바일 반응형 캔버스 컨테이너 */
+        .canvas-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            aspect-ratio: 1 / 1; 
+        }
+        canvas { 
+            width: 100%; height: 100%; /* 컨테이너 크기에 맞춰 자동 축소/확대 */
+            background-color: #34495e; 
+            border: 3px solid #ecf0f1; 
+            box-sizing: border-box;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5); 
+        }
+        #blindOverlay { 
+            position: absolute; top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background-color: rgba(10, 15, 25, 0.98); 
+            display: none; pointer-events: none; 
+            justify-content: center; align-items: center; 
+            font-size: 5vw; font-weight: bold; color: #7f8c8d; z-index: 10; 
+        }
         
-        .ui-container { display: flex; gap: 20px; margin-bottom: 10px; align-items: center; }
+        .ui-container { display: flex; gap: 15px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
         .setup-container, .restart-container { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center;}
-        input { padding: 10px; font-size: 16px; border-radius: 5px; text-align: center; border: 1px solid #bdc3c7;}
-        button { padding: 10px 20px; font-size: 16px; font-weight: bold; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        button:hover { background-color: #c0392b; }
-        #scoreBoard, #livesBoard { font-size: 22px; font-weight: bold; }
-        #livesBoard { color: #ff7675; }
-        #timerBoard { font-size: 22px; font-weight: bold; color: #e67e22; }
+        input { padding: 10px; font-size: 16px; border-radius: 5px; text-align: center; border: 1px solid #bdc3c7; max-width: 150px;}
+        button.start-btn { padding: 10px 20px; font-size: 16px; font-weight: bold; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button.start-btn:hover { background-color: #c0392b; }
         
-        #itemEffect { font-size: 18px; color: #f1c40f; height: 24px; margin-bottom: 10px; font-weight: bold; }
-        .info-text { font-size: 12px; color: #bdc3c7; margin-top: 5px; text-align: center; }
+        #scoreBoard, #livesBoard, #timerBoard { font-size: 20px; font-weight: bold; }
+        #livesBoard { color: #ff7675; }
+        #timerBoard { color: #e67e22; }
+        
+        #itemEffect { font-size: 16px; color: #f1c40f; height: 24px; margin-bottom: 10px; font-weight: bold; text-align: center; }
+        .info-text { font-size: 12px; color: #bdc3c7; margin-top: 10px; text-align: center; }
+
+        /* 모바일 온스크린 컨트롤러 (D-Pad) */
+        .mobile-controls {
+            display: flex; flex-direction: column; align-items: center; margin-top: 20px; gap: 10px;
+        }
+        .ctrl-row { display: flex; gap: 20px; }
+        .ctrl-btn {
+            width: 70px; height: 70px; font-size: 30px; 
+            border-radius: 15px; background-color: #7f8c8d; color: white; 
+            border: 2px solid #95a5a6; box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+            touch-action: none; cursor: pointer; user-select: none;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .ctrl-btn:active { background-color: #95a5a6; transform: translateY(3px); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .pause-btn { background-color: #f39c12; border-color: #f1c40f; font-size: 24px; border-radius: 50%; width: 60px; height: 60px; margin-top: 5px; }
+        .pause-btn:active { background-color: #e67e22; }
     </style>
 </head>
 <body>
     <div class="setup-container" id="setupContainer">
-        <input type="text" id="nicknameInput" placeholder="닉네임 입력 필수!" maxlength="10">
-        <button id="startBtn">게임 시작 (Space)</button>
+        <input type="text" id="nicknameInput" placeholder="닉네임 입력!" maxlength="10">
+        <button id="startBtn" class="start-btn">게임 시작</button>
     </div>
 
     <div class="restart-container" id="restartContainer" style="display: none;">
-        <button id="restartBtn" style="background-color: #3498db;">🔄 다시 도전 (Space)</button>
+        <button id="restartBtn" class="start-btn" style="background-color: #3498db;">🔄 다시 도전</button>
     </div>
 
     <div class="ui-container">
@@ -70,9 +113,21 @@ GAME_HTML = """
     
     <div class="canvas-container">
         <canvas id="gameCanvas" width="600" height="600"></canvas>
-        <div id="blindOverlay">👁️ 암흑 상태 (앞이 보이지 않습니다!)</div>
+        <div id="blindOverlay">👁️ 암흑 상태!</div>
     </div>
-    <div class="info-text">[Space Bar]: 시작/재도전 | [P]: 일시정지 (게임당 1회)</div>
+    
+    <!-- 모바일/마우스 겸용 온스크린 컨트롤러 -->
+    <div class="mobile-controls">
+        <button id="btnUp" class="ctrl-btn">⬆️</button>
+        <div class="ctrl-row">
+            <button id="btnLeft" class="ctrl-btn">⬅️</button>
+            <button id="btnPause" class="ctrl-btn pause-btn">⏸️</button>
+            <button id="btnRight" class="ctrl-btn">➡️</button>
+        </div>
+        <button id="btnDown" class="ctrl-btn">⬇️</button>
+    </div>
+    
+    <div class="info-text">[PC: 방향키/스페이스바/P] [모바일: 화면 버튼 터치]</div>
 
     <script>
         function sendToStreamlit(type, data) {
@@ -81,7 +136,8 @@ GAME_HTML = """
             window.parent.postMessage(msg, "*");
         }
 
-        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 900 }); }
+        // 모바일 컨트롤러 공간을 위해 높이를 1100으로 넉넉하게 잡음
+        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 1100 }); }
         window.addEventListener("load", function() { sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); setHeight(); });
         window.addEventListener("message", function(event) { if (event.data && event.data.type === "streamlit:render") setHeight(); });
 
@@ -105,7 +161,6 @@ GAME_HTML = """
         let hungerTimer = 10;
         let hungerInterval = null;
 
-        // 🌟 다중 키입력 방지용 변수 (의문사 방지)
         let changingDirection = false;
 
         let cloverSpawned = false;
@@ -238,7 +293,6 @@ GAME_HTML = """
             gameInterval = setInterval(main, baseSpeed * speedMod);
         }
 
-        // 난이도(속도) 대폭 완화
         function updateGameDifficulty() {
             document.getElementById("currentScore").innerText = score;
             
@@ -484,7 +538,7 @@ GAME_HTML = """
                 isGridTime = true;
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🌐 250점 달성! 10초간 맵에 격자가 표시됩니다!";
+                effectDisplay.innerText = "🌐 250점 달성! 10초간 격자가 표시됩니다!";
                 effectDisplay.style.color = "#3498db";
                 
                 gridTimeout = setTimeout(() => {
@@ -505,7 +559,7 @@ GAME_HTML = """
                 }
                 
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🍀 정중앙에 대형 클로버밭 등장! 마음껏 갉아먹으세요! (5초)"; 
+                effectDisplay.innerText = "🍀 정중앙에 대형 클로버밭 등장! (5초)"; 
                 effectDisplay.style.color = "#2ecc71";
 
                 cloverTimeout = setTimeout(() => {
@@ -618,17 +672,17 @@ GAME_HTML = """
                 }
             
             } else if (type === 'reverse') {
-                effectDisplay.innerText = "🍄 독버섯! 3초간 방향키가 반대로 조작됩니다!"; effectDisplay.style.color = "#e67e22";
+                effectDisplay.innerText = "🍄 독버섯! 3초간 방향 조작이 반대로!"; effectDisplay.style.color = "#e67e22";
                 isReversedControls = true;
                 if(controlTimeout) clearTimeout(controlTimeout);
                 controlTimeout = setTimeout(() => { isReversedControls = false; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 3000);
                 
             } else if (type === 'caterpillar') {
                 if (Math.random() < 0.5) {
-                    effectDisplay.innerText = "🐛 왕꿈틀이! 주변 먹이를 싹쓸이합니다! (5초)"; effectDisplay.style.color = "#2ecc71";
+                    effectDisplay.innerText = "🐛 왕꿈틀이! 먹이 싹쓸이! (5초)"; effectDisplay.style.color = "#2ecc71";
                     snakeSizeMod = 1.6; 
                 } else {
-                    effectDisplay.innerText = "🐛 꼬마 애벌레! 5초간 몸집이 콩알만해집니다!"; effectDisplay.style.color = "#f1c40f";
+                    effectDisplay.innerText = "🐛 꼬마 애벌레! 콩알만해집니다!"; effectDisplay.style.color = "#f1c40f";
                     snakeSizeMod = 0.5; 
                 }
                 if(sizeTimeout) clearTimeout(sizeTimeout);
@@ -699,69 +753,85 @@ GAME_HTML = """
             return false; 
         }
 
-        window.addEventListener("keydown", function(e) {
-            if (e.keyCode === 32 && !isStarted && !isCountingDown) { e.preventDefault(); triggerStart(); return; }
-            
-            if (e.keyCode === 80) {
-                if (isCountingDown || isGameOver || !isStarted) return;
-                
-                if (!isPaused && !pauseUsed) {
-                    isPaused = true;
-                    pauseUsed = true; 
-                    clearInterval(gameInterval);
-                    if (hungerInterval) clearInterval(hungerInterval);
-                    
-                    ctx.fillStyle = "rgba(0, 0, 0, 0.6)"; 
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.fillStyle = "white"; 
-                    ctx.font = "bold 50px 'Malgun Gothic'";
-                    ctx.textAlign = "center"; 
-                    ctx.textBaseline = "middle";
-                    ctx.fillText("⏸️ 일시정지", canvas.width / 2, canvas.height / 2 - 20);
-                    
-                    ctx.font = "20px 'Malgun Gothic'";
-                    ctx.fillStyle = "#bdc3c7";
-                    ctx.fillText("[P] 키를 다시 누르면 재개됩니다.", canvas.width / 2, canvas.height / 2 + 30);
-                    ctx.fillText("(일시정지는 한 게임당 딱 한 번만 가능!)", canvas.width / 2, canvas.height / 2 + 60);
-                } else if (isPaused) {
-                    isPaused = false;
-                    updateSpeed();
-                    resumeHungerTimer();
-                }
-                return;
-            }
-
+        // --- 컨트롤 함수 공통 모듈화 ---
+        function setDirection(keyCode) {
             if (isCountingDown || isGameOver || isPaused) return;
-            
             if (changingDirection) return;
 
-            if([37, 38, 39, 40, 32, 80].indexOf(e.keyCode) > -1) e.preventDefault(); 
-            
             let LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
+            if (isReversedControls) { LEFT = 39; RIGHT = 37; UP = 40; DOWN = 38; }
             
-            if (isReversedControls) {
-                LEFT = 39; RIGHT = 37; UP = 40; DOWN = 38;
+            if (keyCode === LEFT && dx === 0) { dx = -gridSize; dy = 0; changingDirection = true; }
+            if (keyCode === UP && dy === 0) { dx = 0; dy = -gridSize; changingDirection = true; }
+            if (keyCode === RIGHT && dx === 0) { dx = gridSize; dy = 0; changingDirection = true; }
+            if (keyCode === DOWN && dy === 0) { dx = 0; dy = gridSize; changingDirection = true; }
+        }
+
+        function togglePause() {
+            if (isCountingDown || isGameOver || !isStarted) return;
+            if (!isPaused && !pauseUsed) {
+                isPaused = true;
+                pauseUsed = true; 
+                clearInterval(gameInterval);
+                if (hungerInterval) clearInterval(hungerInterval);
+                
+                ctx.fillStyle = "rgba(0, 0, 0, 0.6)"; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "white"; 
+                ctx.font = "bold 50px 'Malgun Gothic'";
+                ctx.textAlign = "center"; 
+                ctx.textBaseline = "middle";
+                ctx.fillText("⏸️ 일시정지", canvas.width / 2, canvas.height / 2 - 20);
+                
+                ctx.font = "20px 'Malgun Gothic'";
+                ctx.fillStyle = "#bdc3c7";
+                ctx.fillText("다시 누르면 재개됩니다.", canvas.width / 2, canvas.height / 2 + 30);
+                ctx.fillText("(게임당 1번만 사용 가능!)", canvas.width / 2, canvas.height / 2 + 60);
+            } else if (isPaused) {
+                isPaused = false;
+                updateSpeed();
+                resumeHungerTimer();
             }
-            
-            if (e.keyCode === LEFT && dx === 0) { dx = -gridSize; dy = 0; changingDirection = true; }
-            if (e.keyCode === UP && dy === 0) { dx = 0; dy = -gridSize; changingDirection = true; }
-            if (e.keyCode === RIGHT && dx === 0) { dx = gridSize; dy = 0; changingDirection = true; }
-            if (e.keyCode === DOWN && dy === 0) { dx = 0; dy = gridSize; changingDirection = true; }
+        }
+
+        // 1. 물리적 키보드 리스너
+        window.addEventListener("keydown", function(e) {
+            if (e.keyCode === 32 && !isStarted && !isCountingDown) { e.preventDefault(); triggerStart(); return; }
+            if (e.keyCode === 80) { togglePause(); return; }
+            if([37, 38, 39, 40, 32, 80].indexOf(e.keyCode) > -1) {
+                e.preventDefault(); 
+                setDirection(e.keyCode);
+            }
         }, false);
+
+        // 2. 모바일 온스크린 버튼 리스너 (touchstart 및 mousedown 대응)
+        const setupButtonListener = (id, action) => {
+            const btn = document.getElementById(id);
+            const handleAction = (e) => { e.preventDefault(); action(); };
+            btn.addEventListener('touchstart', handleAction, {passive: false});
+            btn.addEventListener('mousedown', handleAction);
+        };
+
+        setupButtonListener('btnUp', () => setDirection(38));
+        setupButtonListener('btnDown', () => setDirection(40));
+        setupButtonListener('btnLeft', () => setDirection(37));
+        setupButtonListener('btnRight', () => setDirection(39));
+        setupButtonListener('btnPause', () => togglePause());
+
     </script>
 </body>
 </html>
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v31)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v32)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v31")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v32")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v31", path=component_dir)
+snake_game = components.declare_component("snake_v32", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -800,7 +870,8 @@ def save_score(nickname, score):
 st.title("🐍 TJ Random Speed Rush 🎮 ")
 st.info(" 🏆최고의 점수에 도전해보자구요!! 게임가이드 보고 시작하기!! ")
 
-col_empty, col1, col2 = st.columns([0.1, 2.1, 1.8])
+# 모바일 호환을 위해 레이아웃 비율을 약간 조정했습니다.
+col_empty, col1, col2 = st.columns([0.05, 2.3, 1.65])
 
 with col_empty:
     st.empty() 
@@ -825,16 +896,16 @@ with col2:
         
         with tab1:
             st.markdown("""
-            * **조작 방법**: 키보드 방향키 (⬅️ ⬆️ ➡️ ⬇️)
-            * **게임 시작/부활**: 닉네임 입력 후 `[Space Bar]` 입력
-            * **일시정지**: 게임 중 위급할 때 **`[P]` 키**를 누르면 일시정지됩니다. (단, 1게임당 **딱 1번만** 사용 가능!)
+            * **조작 방법**: 키보드 방향키 (PC) 또는 화면 하단 십자 버튼 (모바일)
+            * **게임 시작/부활**: 닉네임 입력 후 `[Space Bar]` 또는 `[게임 시작]` 버튼 터치
+            * **일시정지**: 게임 중 위급할 때 **`[P]` 키 또는 온스크린 `[⏸️]` 버튼**을 누르면 일시정지됩니다. (단, 1게임당 **딱 1번만** 사용 가능!)
             * **난이도 상승 (Speed Rush!)**: 
               * 점수가 **50점** 오를 때마다 속도가 **0.5씩 아주 조금씩** 빨라집니다.
               * 점수가 **100점** 오를 때마다 기본 먹이 개수가 증가합니다. (최대 5개)
             * **목숨(하트) 시스템**: 총 **3개(❤️❤️❤️)**의 목숨이 주어집니다.
               * 충돌 시 점수 감점 없이 **몸통만 3칸 줄어든 채** 중앙에서 부활합니다.
             * 🌐 **250점 격자 버프!**: 250점을 돌파하면 **10초간** 맵에 길을 찾기 쉽게 도와주는 반투명 격자가 나타납니다.
-            * 🎉 **500점 돌파 피버 타임!**: 점수가 500단위에 도달하면 **10초간** 맵에 ⭐️(보너스 별)이 가득 차오르는 피버 타임이 발동합니다! (고득점일수록 별 개수 증가!)
+            * 🎉 **500점 돌파 피버 타임!**: 점수가 500단위에 도달하면 **10초간** 맵에 ⭐️(보너스 별)이 가득 차오르는 피버 타임이 발동합니다!
             """)
             
         with tab2:
