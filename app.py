@@ -105,11 +105,6 @@ GAME_HTML = """
         let hungerTimer = 10;
         let hungerInterval = null;
 
-        let warpGate = { active: false, p1: {x: 0, y: 0}, p2: {x: 0, y: 0} };
-        let warpTimeout = null;
-        let warpScheduleTimeout = null;
-        let hitWarpCooldown = 0; 
-
         // 🌟 다중 키입력 방지용 변수 (의문사 방지)
         let changingDirection = false;
 
@@ -156,18 +151,11 @@ GAME_HTML = """
             isGridTime = false;
             if(gridTimeout) clearTimeout(gridTimeout);
             
-            if(warpTimeout) clearTimeout(warpTimeout);
-            if(warpScheduleTimeout) clearTimeout(warpScheduleTimeout);
-            warpGate.active = false;
-            hitWarpCooldown = 0;
-            
             document.getElementById("blindOverlay").style.display = "none";
             updateUI();
             
             normalFoods = [generateValidPosition()];
             hiddenFruits = [];
-            
-            scheduleWarpGate();
         }
 
         function updateUI() {
@@ -263,59 +251,9 @@ GAME_HTML = """
             }
             if (normalFoods.length === 0) normalFoods.push(generateValidPosition());
         }
-        
-        function scheduleWarpGate() {
-            warpScheduleTimeout = setTimeout(() => {
-                if(!isGameOver && isStarted && !isPaused) {
-                    let portals = generateFarPortals();
-                    warpGate.p1 = portals[0];
-                    warpGate.p2 = portals[1];
-                    warpGate.active = true;
-                    
-                    warpTimeout = setTimeout(() => {
-                        warpGate.active = false;
-                        scheduleWarpGate();
-                    }, 10000);
-                }
-            }, Math.random() * 10000 + 10000); 
-        }
-        
-        function generateFarPortals() {
-            let p1, p2;
-            let isHorizontal = Math.random() < 0.5;
-            let maxIdx = (canvas.width / gridSize) - 3; 
-            
-            while (true) {
-                if (isHorizontal) {
-                    let leftX = Math.floor(Math.random() * 3) + 1;
-                    let rightX = maxIdx - Math.floor(Math.random() * 3);
-                    let y1 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
-                    let y2 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
-                    p1 = { x: leftX * gridSize, y: y1 * gridSize };
-                    p2 = { x: rightX * gridSize, y: y2 * gridSize };
-                } else {
-                    let topY = Math.floor(Math.random() * 3) + 1;
-                    let bottomY = maxIdx - Math.floor(Math.random() * 3);
-                    let x1 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
-                    let x2 = Math.floor(Math.random() * (maxIdx - 3)) + 2;
-                    p1 = { x: x1 * gridSize, y: topY * gridSize };
-                    p2 = { x: x2 * gridSize, y: bottomY * gridSize };
-                }
-                
-                let overlap = false;
-                for (let part of snake) {
-                    if ((part.x >= p1.x && part.x < p1.x + 2*gridSize && part.y >= p1.y && part.y < p1.y + 2*gridSize) ||
-                        (part.x >= p2.x && part.x < p2.x + 2*gridSize && part.y >= p2.y && part.y < p2.y + 2*gridSize)) {
-                        overlap = true; break;
-                    }
-                }
-                if (!overlap) break;
-            }
-            return [p1, p2];
-        }
 
         function drawScreenWithText(text) {
-            clearCanvas(); drawWarpGate(); drawNormalFoods(); drawSnake();
+            clearCanvas(); drawNormalFoods(); drawSnake();
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "white"; ctx.font = "bold 50px 'Malgun Gothic'";
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -351,7 +289,6 @@ GAME_HTML = """
                 ctx.fillText("BONUS!", canvas.width / 2, canvas.height / 2);
             }
             
-            drawWarpGate(); 
             drawNormalFoods(); 
             drawHiddenFruits(); 
             drawGiantClover(); 
@@ -405,7 +342,6 @@ GAME_HTML = """
             const headDiffY = 300 - snake[0].y;
             snake.forEach(part => { part.x += headDiffX; part.y += headDiffY; });
             dx = 0; dy = -gridSize;
-            hitWarpCooldown = 0;
             
             setTimeout(() => { 
                 if(!isGameOver && !isPaused) {
@@ -418,8 +354,6 @@ GAME_HTML = """
         function endGame() {
             clearInterval(gameInterval); 
             if(hungerInterval) clearInterval(hungerInterval); 
-            if(warpTimeout) clearTimeout(warpTimeout);
-            if(warpScheduleTimeout) clearTimeout(warpScheduleTimeout);
             if(cloverTimeout) clearTimeout(cloverTimeout);
             if(bonusTimeTimeout) clearTimeout(bonusTimeTimeout);
             if(gridTimeout) clearTimeout(gridTimeout);
@@ -537,32 +471,8 @@ GAME_HTML = """
             });
         }
         
-        function drawWarpGate() {
-            if (!warpGate.active) return;
-            ctx.font = "40px Arial";
-            ctx.textAlign = "center"; 
-            ctx.textBaseline = "middle";
-            ctx.fillText("🕳️", warpGate.p1.x + gridSize, warpGate.p1.y + gridSize + 2);
-            ctx.fillText("🕳️", warpGate.p2.x + gridSize, warpGate.p2.y + gridSize + 2);
-        }
-        
         function advanceSnake() { 
             let head = { x: snake[0].x + dx, y: snake[0].y + dy }; 
-            
-            if (warpGate.active && hitWarpCooldown <= 0) {
-                if (head.x >= warpGate.p1.x && head.x < warpGate.p1.x + 2*gridSize &&
-                    head.y >= warpGate.p1.y && head.y < warpGate.p1.y + 2*gridSize) {
-                    head.x = warpGate.p2.x + (head.x - warpGate.p1.x);
-                    head.y = warpGate.p2.y + (head.y - warpGate.p1.y);
-                    hitWarpCooldown = 4; 
-                } else if (head.x >= warpGate.p2.x && head.x < warpGate.p2.x + 2*gridSize &&
-                           head.y >= warpGate.p2.y && head.y < warpGate.p2.y + 2*gridSize) {
-                    head.x = warpGate.p1.x + (head.x - warpGate.p2.x);
-                    head.y = warpGate.p1.y + (head.y - warpGate.p2.y);
-                    hitWarpCooldown = 4;
-                }
-            }
-            if (hitWarpCooldown > 0) hitWarpCooldown--;
             
             snake.unshift(head); 
             
@@ -923,7 +833,6 @@ with col2:
               * 점수가 **100점** 오를 때마다 기본 먹이 개수가 증가합니다. (최대 5개)
             * **목숨(하트) 시스템**: 총 **3개(❤️❤️❤️)**의 목숨이 주어집니다.
               * 충돌 시 점수 감점 없이 **몸통만 3칸 줄어든 채** 중앙에서 부활합니다.
-            * 🕳️ **대형 블랙홀(워프 게이트)**: 10~20초 주기로 맵 **상하/좌우 양끝단**에 대형 2x2 사이즈 블랙홀 2개가 열립니다. 쏙 들어가면 맵 반대편으로 순간이동하는 지름길입니다!
             * 🌐 **250점 격자 버프!**: 250점을 돌파하면 **10초간** 맵에 길을 찾기 쉽게 도와주는 반투명 격자가 나타납니다.
             * 🎉 **500점 돌파 피버 타임!**: 점수가 500단위에 도달하면 **10초간** 맵에 ⭐️(보너스 별)이 가득 차오르는 피버 타임이 발동합니다! (고득점일수록 별 개수 증가!)
             """)
