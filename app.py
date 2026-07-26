@@ -75,23 +75,63 @@ GAME_HTML = """
         #timerBoard { color: #e67e22; }
         
         #itemEffect { font-size: 16px; color: #f1c40f; height: 24px; margin-bottom: 10px; font-weight: bold; text-align: center; }
-        .info-text { font-size: 12px; color: #bdc3c7; margin-top: 10px; text-align: center; }
+        .info-text { font-size: 12px; color: #bdc3c7; margin-top: 25px; text-align: center; }
 
-        /* 모바일 온스크린 컨트롤러 (D-Pad) */
-        .mobile-controls {
-            display: flex; flex-direction: column; align-items: center; margin-top: 20px; gap: 10px;
+        /* ------------------------------------------------
+           모바일 온스크린 컨트롤러 (키보드 화살표 배열)
+           ------------------------------------------------ */
+        .controls-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            max-width: 350px; /* 전체 컨트롤 영역 너비 제한 */
+            margin-top: 20px;
         }
-        .ctrl-row { display: flex; gap: 20px; }
+
+        .d-pad {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .d-pad-row {
+            display: flex;
+            gap: 10px;
+        }
+
         .ctrl-btn {
-            width: 70px; height: 70px; font-size: 30px; 
-            border-radius: 15px; background-color: #7f8c8d; color: white; 
-            border: 2px solid #95a5a6; box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+            width: 75px; height: 75px; font-size: 32px; 
+            border-radius: 15px; background-color: #1a1a1a; color: white; 
+            border: none; box-shadow: 0 5px 0 #000; /* 입체적인 키보드 느낌 */
             touch-action: none; cursor: pointer; user-select: none;
             display: flex; justify-content: center; align-items: center;
+            font-family: Arial, sans-serif;
+            transition: transform 0.1s, box-shadow 0.1s;
         }
-        .ctrl-btn:active { background-color: #95a5a6; transform: translateY(3px); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-        .pause-btn { background-color: #f39c12; border-color: #f1c40f; font-size: 24px; border-radius: 50%; width: 60px; height: 60px; margin-top: 5px; }
-        .pause-btn:active { background-color: #e67e22; }
+
+        .ctrl-btn:active { 
+            background-color: #333; 
+            transform: translateY(5px); 
+            box-shadow: 0 0 0 #000; 
+        }
+
+        /* 일시정지 버튼 (우측 상단 분리) */
+        .pause-btn { 
+            position: absolute;
+            right: 0px;
+            top: 0px;
+            background-color: #f39c12; 
+            box-shadow: 0 5px 0 #c87f0a; 
+            font-size: 24px; 
+            border-radius: 50%; 
+            width: 65px; height: 65px; 
+        }
+        .pause-btn:active { 
+            background-color: #e67e22; 
+            box-shadow: 0 0 0 #c87f0a; 
+        }
     </style>
 </head>
 <body>
@@ -116,15 +156,20 @@ GAME_HTML = """
         <div id="blindOverlay">👁️ 암흑 상태!</div>
     </div>
     
-    <!-- 모바일/마우스 겸용 온스크린 컨트롤러 -->
-    <div class="mobile-controls">
-        <button id="btnUp" class="ctrl-btn">⬆️</button>
-        <div class="ctrl-row">
-            <button id="btnLeft" class="ctrl-btn">⬅️</button>
-            <button id="btnPause" class="ctrl-btn pause-btn">⏸️</button>
-            <button id="btnRight" class="ctrl-btn">➡️</button>
+    <!-- 모바일 온스크린 컨트롤러 (키보드 레이아웃) -->
+    <div class="controls-wrapper">
+        <div class="d-pad">
+            <div class="d-pad-row top">
+                <button id="btnUp" class="ctrl-btn">▲</button>
+            </div>
+            <div class="d-pad-row bottom">
+                <button id="btnLeft" class="ctrl-btn">◀</button>
+                <button id="btnDown" class="ctrl-btn">▼</button>
+                <button id="btnRight" class="ctrl-btn">▶</button>
+            </div>
         </div>
-        <button id="btnDown" class="ctrl-btn">⬇️</button>
+        <!-- 화살표와 분리된 우측 상단 일시정지 버튼 -->
+        <button id="btnPause" class="ctrl-btn pause-btn">⏸️</button>
     </div>
     
     <div class="info-text">[PC: 방향키/스페이스바/P] [모바일: 화면 버튼 터치]</div>
@@ -824,14 +869,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v32)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v33)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v32")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v33")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v32", path=component_dir)
+snake_game = components.declare_component("snake_v33", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
