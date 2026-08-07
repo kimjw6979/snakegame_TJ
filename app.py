@@ -6,7 +6,7 @@ import time
 import datetime
 
 # 페이지 설정
-st.set_page_config(page_title="은하철도 스피드 러시", page_icon="🚂", layout="wide")
+st.set_page_config(page_title="칙칙폭폭", page_icon="🚂", layout="wide")
 
 # -------------------------------------------------------------
 # 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS]
@@ -22,18 +22,35 @@ hide_menu_style = """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# 🎮 [HTML/JS 최신 네온 트렌드 게임 엔진 - 배경 구분 개선]
+# 🎮 [HTML/JS 최신 네온 트렌드 게임 엔진 - 모바일 최적화 에디션]
 # -------------------------------------------------------------
 GAME_HTML = """
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    /* 모바일 확대 방지 및 뷰포트 고정 */
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <style>
+        /* 모바일 터치 시 텍스트 블록 지정 방지 */
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* 텍스트 입력창은 선택 가능하도록 예외 처리 */
+        input {
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
+
         /* 은하철도 우주/네온 테마 */
         :root {
-            --bg-color: #1e293b; /* 기존보다 밝은 톤으로 변경 */
+            --bg-color: #1e293b; 
             --panel-bg: rgba(15, 23, 42, 0.75);
             --neon-green: #10b981;
             --neon-red: #f43f5e;
@@ -46,9 +63,9 @@ GAME_HTML = """
             display: flex; flex-direction: column; align-items: center; 
             background-color: var(--bg-color); color: var(--text-main); 
             font-family: 'Pretendard', 'Malgun Gothic', sans-serif; 
-            margin: 0; padding: 10px; height: 1100px; overflow: hidden; 
-            touch-action: manipulation;
-            /* 캔버스와 구분되도록 바깥 배경을 밝은 우주 성운 톤으로 변경 */
+            margin: 0; padding: 10px; height: 1150px; overflow: hidden; 
+            touch-action: none; /* 전체 스크롤 방지 */
+            overscroll-behavior-y: contain; /* 당겨서 새로고침 방지 */
             background-image: radial-gradient(circle at 50% 0%, #3b82f6 0%, #1e293b 45%, #0f172a 100%);
         }
         
@@ -62,12 +79,12 @@ GAME_HTML = """
         
         canvas { 
             width: 100%; height: 100%; 
-            background-color: #020617; /* 실제 플레이 영역은 칠흑 같은 우주로 유지 */
+            background-color: #020617; 
             border-radius: 16px;
-            /* 밝고 굵은 테두리와 글로우를 줘서 명확하게 분리 */
             box-shadow: 0 0 40px rgba(59, 130, 246, 0.5), inset 0 0 25px rgba(0,0,0,0.9);
             border: 4px solid rgba(59, 130, 246, 0.7);
             box-sizing: border-box;
+            touch-action: none;
         }
 
         #blindOverlay { 
@@ -80,7 +97,7 @@ GAME_HTML = """
             border-radius: 16px;
         }
         
-        /* 글래스모피즘 UI 컨테이너 */
+        /* 상단 UI (점수판 등) */
         .ui-container { 
             display: flex; gap: 15px; margin-bottom: 5px; align-items: center; 
             justify-content: center; flex-wrap: wrap;
@@ -90,6 +107,7 @@ GAME_HTML = """
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
             box-shadow: 0 8px 15px rgba(0,0,0,0.5);
+            width: 100%; max-width: 550px; box-sizing: border-box;
         }
         
         .setup-container, .restart-container { 
@@ -114,29 +132,46 @@ GAME_HTML = """
         #scoreBoard { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
         #livesBoard { color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); }
         #timerBoard { color: var(--neon-gold); text-shadow: 0 0 10px var(--neon-gold); }
-        #scoreBoard, #livesBoard, #timerBoard { font-size: 18px; font-weight: 800; letter-spacing: 1px;}
+        #scoreBoard, #livesBoard, #timerBoard { font-size: 18px; font-weight: 800; letter-spacing: 1px; white-space: nowrap;}
         
         #itemEffect { 
             font-size: 16px; color: var(--neon-gold); height: 24px; margin-bottom: 5px; 
             font-weight: bold; text-align: center; text-shadow: 0 0 8px currentColor;
         }
 
-        .info-text { font-size: 12px; color: #94a3b8; margin-top: 15px; text-align: center; letter-spacing: 1px;}
+        .info-text { font-size: 12px; color: #94a3b8; margin-top: 15px; text-align: center; letter-spacing: 1px; padding-bottom: 40px;}
 
-        /* 모바일 네온 컨트롤러 */
+        /* --- 모바일 네온 컨트롤러 (레이아웃 개편) --- */
         .controls-wrapper {
-            position: relative; display: flex; justify-content: center;
-            width: 100%; max-width: 350px; margin-top: 25px;
+            position: relative; 
+            display: flex; 
+            justify-content: center;
+            align-items: flex-end;
+            width: 100%; 
+            max-width: 400px; 
+            margin-top: 25px;
         }
-        .d-pad { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-        .d-pad-row { display: flex; gap: 12px; }
+        
+        /* 십자키를 위한 CSS Grid 적용 */
+        .d-pad { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 10px;
+            margin-right: 20px; /* 일시정지 버튼과의 간격 */
+        }
+        
+        #btnUp { grid-column: 2; grid-row: 1; }
+        #btnLeft { grid-column: 1; grid-row: 2; }
+        #btnDown { grid-column: 2; grid-row: 2; }
+        #btnRight { grid-column: 3; grid-row: 2; }
         
         .ctrl-btn {
-            width: 70px; height: 70px; font-size: 28px; 
+            width: 75px; height: 75px; font-size: 32px; 
             border-radius: 18px; background: rgba(15, 23, 42, 0.9); color: rgba(255,255,255,0.9); 
             border: 1px solid rgba(255,255,255,0.2); 
             box-shadow: 0 8px 0 rgba(2, 6, 23, 0.9), inset 0 2px 2px rgba(255,255,255,0.1); 
-            touch-action: none; cursor: pointer; user-select: none;
+            touch-action: manipulation; cursor: pointer;
             display: flex; justify-content: center; align-items: center;
             transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
             backdrop-filter: blur(5px);
@@ -146,12 +181,29 @@ GAME_HTML = """
             transform: translateY(8px); box-shadow: 0 0 0 rgba(0,0,0,0); 
         }
 
+        /* 일시정지 버튼 재배치 */
+        .pause-btn-container {
+            display: flex;
+            align-items: flex-end;
+            padding-bottom: 5px; /* D-pad 높이와 맞춤 */
+        }
+
         .pause-btn { 
-            position: absolute; right: 0px; top: 0px;
             background: rgba(245, 158, 11, 0.9); box-shadow: 0 8px 0 #b45309; 
-            font-size: 24px; border-radius: 50%; width: 60px; height: 60px; border:none;
+            font-size: 26px; border-radius: 50%; width: 65px; height: 65px; border:none;
         }
         .pause-btn:active { background: #d97706; transform: translateY(8px); box-shadow: 0 0 0 #b45309; }
+
+        /* 모바일 기기 맞춤형 미디어 쿼리 */
+        @media (max-width: 500px) {
+            .ui-container { padding: 8px 10px; gap: 10px; border-radius: 15px; }
+            #scoreBoard, #livesBoard, #timerBoard { font-size: 14px; }
+            .ctrl-btn { width: 65px; height: 65px; font-size: 26px; border-radius: 15px; }
+            .pause-btn { width: 55px; height: 55px; font-size: 22px; }
+            .d-pad { gap: 8px; margin-right: 15px; }
+            .controls-wrapper { margin-top: 15px; }
+            #itemEffect { font-size: 14px; }
+        }
     </style>
 </head>
 <body>
@@ -167,7 +219,7 @@ GAME_HTML = """
     <div class="ui-container">
         <div id="scoreBoard">승객: <span id="currentScore">0</span>명</div>
         <div id="livesBoard">장갑: <span id="heartDisplay">❤️❤️❤️</span></div>
-        <div id="timerBoard">🛤️선로 연결: <span id="foodTimerDisplay">10</span>s</div>
+        <div id="timerBoard">🛤️선로: <span id="foodTimerDisplay">10</span>s</div>
     </div>
     <div id="itemEffect"></div>
     
@@ -178,19 +230,17 @@ GAME_HTML = """
     
     <div class="controls-wrapper">
         <div class="d-pad">
-            <div class="d-pad-row top">
-                <button id="btnUp" class="ctrl-btn">▲</button>
-            </div>
-            <div class="d-pad-row bottom">
-                <button id="btnLeft" class="ctrl-btn">◀</button>
-                <button id="btnDown" class="ctrl-btn">▼</button>
-                <button id="btnRight" class="ctrl-btn">▶</button>
-            </div>
+            <button id="btnUp" class="ctrl-btn">▲</button>
+            <button id="btnLeft" class="ctrl-btn">◀</button>
+            <button id="btnDown" class="ctrl-btn">▼</button>
+            <button id="btnRight" class="ctrl-btn">▶</button>
         </div>
-        <button id="btnPause" class="ctrl-btn pause-btn">⏸️</button>
+        <div class="pause-btn-container">
+            <button id="btnPause" class="ctrl-btn pause-btn">⏸️</button>
+        </div>
     </div>
     
-    <div class="info-text">[PC: 방향키/스페이스바/P] [Mobile: 화면 버튼 터치]</div>
+    <div class="info-text">[PC: 방향키/스페이스바/P] [Mobile: 십자버튼 터치]</div>
 
     <script>
         function sendToStreamlit(type, data) {
@@ -199,7 +249,7 @@ GAME_HTML = """
             window.parent.postMessage(msg, "*");
         }
 
-        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 1100 }); }
+        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: 1150 }); }
         window.addEventListener("load", function() { sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); setHeight(); });
         window.addEventListener("message", function(event) { if (event.data && event.data.type === "streamlit:render") setHeight(); });
 
@@ -321,7 +371,7 @@ GAME_HTML = """
                     }
                     
                     const effectDisplay = document.getElementById("itemEffect");
-                    effectDisplay.innerText = "⚠️ 선로 이탈 경고! 강제 궤도 수정으로 객차 4량 추가!"; 
+                    effectDisplay.innerText = "⚠️ 선로 이탈 경고! 궤도 수정으로 객차 4량 추가!"; 
                     effectDisplay.style.color = COLOR_NEON_RED; 
                     setTimeout(() => { if(effectDisplay.innerText.includes("이탈") && !isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 2500);
                     
@@ -412,7 +462,7 @@ GAME_HTML = """
                 
                 let isPause = countdownText.includes("일시정지");
                 ctx.fillStyle = COLOR_NEON_GOLD; 
-                ctx.font = isPause ? "bold 50px 'Pretendard'" : "bold 60px 'Pretendard'";
+                ctx.font = isPause ? "bold 40px 'Pretendard'" : "bold 50px 'Pretendard'";
                 ctx.textAlign = "center"; 
                 ctx.textBaseline = "middle";
                 ctx.shadowBlur = 20; 
@@ -421,7 +471,7 @@ GAME_HTML = """
                 
                 if (isPause) {
                     ctx.fillStyle = "#94a3b8"; 
-                    ctx.font = "20px 'Pretendard'";
+                    ctx.font = "18px 'Pretendard'";
                     ctx.shadowBlur = 0;
                     ctx.fillText("(운행당 1번만 사용 가능!)", canvas.width / 2, canvas.height / 2 + 30);
                 }
@@ -585,7 +635,6 @@ GAME_HTML = """
             ctx.restore(); 
         }
 
-        // --- 🛤️ 선로(기찻길) 렌더링 ---
         function drawNormalFoods() { 
             ctx.strokeStyle = "rgba(255, 255, 255, 0.9)"; 
             ctx.lineWidth = 1.5;
@@ -607,7 +656,6 @@ GAME_HTML = """
             ctx.shadowBlur = 0;
         }
         
-        // --- 🎁 밝은 네온 물음표 상자 렌더링 ---
         function drawHiddenFruits() {
             hiddenFruits.forEach(fruit => {
                 let fx = fruit.x;
@@ -687,7 +735,7 @@ GAME_HTML = """
             if (score >= 250 && !gridTriggered) {
                 gridTriggered = true; isGridTime = true;
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🌐 항법 컴퓨터 가동! 우주 궤도 10초간 표시!";
+                effectDisplay.innerText = "🌐 항법 컴퓨터 가동! 궤도망 표시!";
                 effectDisplay.style.color = COLOR_NEON_BLUE;
                 gridTimeout = setTimeout(() => { isGridTime = false; if (!isGameOver && !isPaused && !isBonusTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 10000); 
             }
@@ -696,7 +744,7 @@ GAME_HTML = """
                 cloverSpawned = true; isGiantCloverActive = true; giantCloverBlocks = [];
                 for (let r = 0; r < 10; r++) { for (let c = 0; c < 10; c++) { giantCloverBlocks.push({ x: 200 + c * gridSize, y: 200 + r * gridSize }); } }
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🌌 안드로메다 정거장 출현! 중앙으로 집결!"; 
+                effectDisplay.innerText = "🌌 정거장 출현! 중앙으로 집결!"; 
                 effectDisplay.style.color = COLOR_NEON_GREEN;
                 cloverTimeout = setTimeout(() => {
                     isGiantCloverActive = false; giantCloverBlocks = [];
@@ -775,7 +823,7 @@ GAME_HTML = """
                 if(controlTimeout) clearTimeout(controlTimeout);
                 controlTimeout = setTimeout(() => { isReversedControls = false; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 3000);
             } else if (type === 'caterpillar') {
-                if (Math.random() < 0.5) { effectDisplay.innerText = "💪 전방위 실드! 주변 선로 싹쓸이 (5초)"; effectDisplay.style.color = COLOR_NEON_BLUE; snakeSizeMod = 1.8; } 
+                if (Math.random() < 0.5) { effectDisplay.innerText = "💪 쉴드 전개! 선로 자석 (5초)"; effectDisplay.style.color = COLOR_NEON_BLUE; snakeSizeMod = 1.8; } 
                 else { effectDisplay.innerText = "📉 초공간 도약! 기차가 작아집니다!"; effectDisplay.style.color = COLOR_NEON_GOLD; snakeSizeMod = 0.5; }
                 if(sizeTimeout) clearTimeout(sizeTimeout);
                 sizeTimeout = setTimeout(() => { snakeSizeMod = 1; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
@@ -786,13 +834,13 @@ GAME_HTML = """
                 speedMod = 1.6; updateSpeed();
                 setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'fast') {
-                effectDisplay.innerText = "⚡ 하이퍼 드라이브! 속도 급상승 (5초)"; effectDisplay.style.color = "#c084fc";
+                effectDisplay.innerText = "⚡ 하이퍼 드라이브! 속도 상승 (5초)"; effectDisplay.style.color = "#c084fc";
                 speedMod = 0.5; updateSpeed();
                 setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'penalty') {
                 score = Math.max(0, score - 30); effectDisplay.innerText = "💀 우주 해적 조우! 승객 -30명!"; effectDisplay.style.color = COLOR_NEON_RED;
             } else if (type === 'super') {
-                score += 100; effectDisplay.innerText = "🚀 메텔의 가호! 슈퍼 보너스 +100명!"; effectDisplay.style.color = COLOR_NEON_GREEN;
+                score += 100; effectDisplay.innerText = "🚀 특급열차! 보너스 +100명!"; effectDisplay.style.color = COLOR_NEON_GREEN;
             }
             updateGameDifficulty(); 
             setTimeout(() => { if(!['slow','fast','blind','reverse','caterpillar'].includes(type) && !isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 2500);
@@ -829,7 +877,7 @@ GAME_HTML = """
                 isCountingDown = true; 
                 if(hungerInterval) clearInterval(hungerInterval);
                 
-                countdownText = "💥 장갑 손상! 비상 복구중...";
+                countdownText = "💥 장갑 손상! 복구중...";
                 
                 setTimeout(() => {
                     resetSnakePosition(); 
@@ -940,12 +988,18 @@ GAME_HTML = """
             if([37, 38, 39, 40, 32, 80].indexOf(e.keyCode) > -1) { e.preventDefault(); setDirection(e.keyCode); }
         }, false);
 
+        /* 모바일 터치 이벤트 최적화 */
         const setupButtonListener = (id, action) => {
             const btn = document.getElementById(id);
-            const handleAction = (e) => { e.preventDefault(); action(); };
+            const handleAction = (e) => { 
+                e.preventDefault(); // 스크롤 등 기본 동작 방지
+                action(); 
+            };
+            // touchstart 만 사용하여 모바일 이중 클릭 방지
             btn.addEventListener('touchstart', handleAction, {passive: false});
             btn.addEventListener('mousedown', handleAction);
         };
+        
         setupButtonListener('btnUp', () => setDirection(38));
         setupButtonListener('btnDown', () => setDirection(40));
         setupButtonListener('btnLeft', () => setDirection(37));
@@ -957,14 +1011,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v42)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v43)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v42")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v43")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v42", path=component_dir)
+snake_game = components.declare_component("snake_v43", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -998,7 +1052,7 @@ def save_score(nickname, score):
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("⚡ 칙칙-폭폭 러쉬 (Galaxy Express) 🚂")
+st.title("⚡ 칙칙-폭폭 스피드 러시 (Galaxy Express) 🚂")
 st.info("🏆 999호의 차장이 되어 끝없는 우주 궤도를 질주하세요!")
 
 col_empty, col1, col2 = st.columns([0.05, 2.3, 1.65])
@@ -1021,7 +1075,7 @@ with col1:
             st.rerun()
 
 with col2:
-    with st.expander("📖 게임 가이드 보기 (은하철도 999 모드)", expanded=True):
+    with st.expander("📖 게임 가이드 보기 (은하철도 999 모드)", expanded=False):
         tab1, tab2, tab3 = st.tabs(["🕹️ 설명", "📦 수화물(아이템)", "⚠️ 주의사항"])
         
         with tab1:
