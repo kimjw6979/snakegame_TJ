@@ -6,7 +6,7 @@ import time
 import datetime
 
 # 페이지 설정
-st.set_page_config(page_title="TJ 네온 스피드 러시", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="은하철도 스피드 러시", page_icon="🚂", layout="wide")
 
 # -------------------------------------------------------------
 # 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS]
@@ -22,7 +22,7 @@ hide_menu_style = """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# 🎮 [HTML/JS 최신 네온 트렌드 게임 엔진]
+# 🎮 [HTML/JS 최신 네온 트렌드 게임 엔진 - 은하철도 에디션]
 # -------------------------------------------------------------
 GAME_HTML = """
 <!DOCTYPE html>
@@ -31,7 +31,7 @@ GAME_HTML = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        /* 트렌디한 다크/네온 테마 (사이버펑크 & 글래스모피즘) */
+        /* 은하철도 우주/네온 테마 */
         :root {
             --bg-color: #0f172a;
             --panel-bg: rgba(30, 41, 59, 0.7);
@@ -48,7 +48,7 @@ GAME_HTML = """
             font-family: 'Pretendard', 'Malgun Gothic', sans-serif; 
             margin: 0; padding: 10px; height: 1100px; overflow: hidden; 
             touch-action: manipulation;
-            background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+            background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #050b14 100%);
         }
         
         .canvas-container { 
@@ -61,17 +61,17 @@ GAME_HTML = """
         
         canvas { 
             width: 100%; height: 100%; 
-            background-color: #0b1120; 
+            background-color: #020617; 
             border-radius: 16px;
-            box-shadow: 0 0 25px rgba(16, 185, 129, 0.15), inset 0 0 20px rgba(0,0,0,0.8);
-            border: 2px solid rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.2), inset 0 0 20px rgba(0,0,0,0.8);
+            border: 2px solid rgba(59, 130, 246, 0.3);
             box-sizing: border-box;
         }
 
         #blindOverlay { 
             position: absolute; top: 0; left: 0; 
             width: 100%; height: 100%; 
-            background-color: rgba(11, 17, 32, 0.98); 
+            background-color: rgba(2, 6, 23, 0.98); 
             display: none; pointer-events: none; 
             justify-content: center; align-items: center; 
             font-size: 5vw; font-weight: bold; color: #94a3b8; z-index: 10; 
@@ -99,17 +99,17 @@ GAME_HTML = """
             border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); 
             color: white; max-width: 150px; outline: none; transition: 0.3s;
         }
-        input:focus { border-color: var(--neon-green); box-shadow: 0 0 10px var(--neon-green); }
+        input:focus { border-color: var(--neon-gold); box-shadow: 0 0 10px var(--neon-gold); }
 
         button.start-btn { 
             padding: 12px 24px; font-size: 16px; font-weight: 800; 
-            background: linear-gradient(135deg, #10b981, #059669); 
+            background: linear-gradient(135deg, #fbbf24, #d97706); 
             color: white; border: none; border-radius: 12px; cursor: pointer; 
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); transition: transform 0.1s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4); transition: transform 0.1s, box-shadow 0.2s;
         }
         button.start-btn:active { transform: scale(0.95); }
         
-        #scoreBoard { color: var(--neon-green); text-shadow: 0 0 10px var(--neon-green); }
+        #scoreBoard { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
         #livesBoard { color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); }
         #timerBoard { color: var(--neon-gold); text-shadow: 0 0 10px var(--neon-gold); }
         #scoreBoard, #livesBoard, #timerBoard { font-size: 18px; font-weight: 800; letter-spacing: 1px;}
@@ -140,7 +140,7 @@ GAME_HTML = """
             backdrop-filter: blur(5px);
         }
         .ctrl-btn:active { 
-            background: rgba(16, 185, 129, 0.4); color: white; border-color: var(--neon-green);
+            background: rgba(251, 191, 36, 0.4); color: white; border-color: var(--neon-gold);
             transform: translateY(8px); box-shadow: 0 0 0 rgba(0,0,0,0); 
         }
 
@@ -154,24 +154,24 @@ GAME_HTML = """
 </head>
 <body>
     <div class="setup-container" id="setupContainer">
-        <input type="text" id="nicknameInput" placeholder="닉네임 입력!" maxlength="10">
-        <button id="startBtn" class="start-btn">⚡ GAME START</button>
+        <input type="text" id="nicknameInput" placeholder="차장님 성함!" maxlength="10">
+        <button id="startBtn" class="start-btn">🚂 은하철도 발차!</button>
     </div>
 
     <div class="restart-container" id="restartContainer" style="display: none;">
-        <button id="restartBtn" class="start-btn" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">🔄 RETRY</button>
+        <button id="restartBtn" class="start-btn" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">🔄 재운행</button>
     </div>
 
     <div class="ui-container">
-        <div id="scoreBoard">SCORE: <span id="currentScore">0</span></div>
-        <div id="livesBoard">LIFE: <span id="heartDisplay">❤️❤️❤️</span></div>
-        <div id="timerBoard">⏳ <span id="foodTimerDisplay">10</span>s</div>
+        <div id="scoreBoard">승객: <span id="currentScore">0</span>명</div>
+        <div id="livesBoard">장갑: <span id="heartDisplay">❤️❤️❤️</span></div>
+        <div id="timerBoard">🛤️선로 연결: <span id="foodTimerDisplay">10</span>s</div>
     </div>
     <div id="itemEffect"></div>
     
     <div class="canvas-container">
         <canvas id="gameCanvas" width="600" height="600"></canvas>
-        <div id="blindOverlay">SYSTEM MALFUNCTION... 👁️</div>
+        <div id="blindOverlay">성운 진입 중... 👁️</div>
     </div>
     
     <div class="controls-wrapper">
@@ -263,7 +263,7 @@ GAME_HTML = """
 
         function updateUI() {
             document.getElementById("currentScore").innerText = score;
-            document.getElementById("heartDisplay").innerText = "❤️".repeat(lives);
+            document.getElementById("heartDisplay").innerText = "🛡️".repeat(lives);
             document.getElementById("foodTimerDisplay").innerText = hungerTimer;
             if (!isBonusTime && !isGridTime && !isGiantCloverActive) document.getElementById("itemEffect").innerText = "";
         }
@@ -274,7 +274,7 @@ GAME_HTML = """
         function triggerStart() {
             const inputVal = document.getElementById("nicknameInput").value.trim();
             if (document.getElementById("setupContainer").style.display !== "none") {
-                if (!inputVal) { alert("⚠️ 게임 시작을 위해 닉네임을 입력해주세요!"); return; }
+                if (!inputVal) { alert("⚠️ 발차를 위해 차장님(유저) 성함을 입력해주세요!"); return; }
                 nickname = inputVal;
             }
             document.getElementById("setupContainer").style.display = "none";
@@ -288,7 +288,7 @@ GAME_HTML = """
             isCountingDown = true;
             let count = 3; 
             let countInterval = setInterval(() => {
-                drawScreenWithText(count > 0 ? count : "START!");
+                drawScreenWithText(count > 0 ? count : "발차!");
                 count--;
                 if (count < -1) {
                     clearInterval(countInterval); isCountingDown = false;
@@ -307,16 +307,16 @@ GAME_HTML = """
                 document.getElementById("foodTimerDisplay").innerText = hungerTimer;
                 
                 if (hungerTimer <= 0) {
-                    // [변경점] 타이머 종료 시 4칸 증가(과부하 페널티)
+                    // 타이머 종료 시 객차 4칸 연장 페널티
                     for(let i=0; i<4; i++) {
                         let tail = snake[snake.length-1];
                         snake.push({x: tail.x, y: tail.y});
                     }
                     
                     const effectDisplay = document.getElementById("itemEffect");
-                    effectDisplay.innerText = "⚠️ SYSTEM WARNING: 에너지 과부하! 궤적 4칸 연장!"; 
-                    effectDisplay.style.color = "var(--neon-red)"; 
-                    setTimeout(() => { if(effectDisplay.innerText.includes("에너지") && !isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 2000);
+                    effectDisplay.innerText = "⚠️ 선로 이탈 경고! 강제 궤도 수정으로 객차 4량 추가!"; 
+                    effectDisplay.style.color = COLOR_NEON_RED; 
+                    setTimeout(() => { if(effectDisplay.innerText.includes("이탈") && !isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 2500);
                     
                     hungerTimer = 10;
                     document.getElementById("foodTimerDisplay").innerText = hungerTimer;
@@ -362,10 +362,10 @@ GAME_HTML = """
 
         function drawScreenWithText(text) {
             clearCanvas(); renderFrame(true);
-            ctx.fillStyle = "rgba(11, 17, 32, 0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = COLOR_NEON_GREEN; ctx.font = "bold 60px 'Pretendard'";
+            ctx.fillStyle = "rgba(2, 6, 23, 0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = COLOR_NEON_GOLD; ctx.font = "bold 60px 'Pretendard'";
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.shadowBlur = 20; ctx.shadowColor = COLOR_NEON_GREEN;
+            ctx.shadowBlur = 20; ctx.shadowColor = COLOR_NEON_GOLD;
             ctx.fillText(text, canvas.width / 2, canvas.height / 2);
             ctx.shadowBlur = 0;
         }
@@ -373,7 +373,7 @@ GAME_HTML = """
         function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
         function drawGrid() {
-            ctx.strokeStyle = "rgba(16, 185, 129, 0.15)"; ctx.lineWidth = 1;
+            ctx.strokeStyle = "rgba(59, 130, 246, 0.15)"; ctx.lineWidth = 1;
             for(let x = 0; x <= canvas.width; x += gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
             for(let y = 0; y <= canvas.height; y += gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
         }
@@ -386,13 +386,18 @@ GAME_HTML = """
 
         function renderFrame(skipClear = false) {
             if(!skipClear) clearCanvas();
+            
+            // 우주 배경의 작은 별들
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            ctx.fillRect(100, 150, 2, 2); ctx.fillRect(400, 50, 2, 2); ctx.fillRect(500, 450, 2, 2); ctx.fillRect(200, 500, 2, 2);
+
             if (isGridTime) drawGrid();
             
             if (isBonusTime) {
                 ctx.fillStyle = "rgba(251, 191, 36, 0.05)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.font = "bold 90px 'Pretendard'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillStyle = "rgba(251, 191, 36, 0.2)";
-                ctx.fillText("FEVER!", canvas.width / 2, canvas.height / 2);
+                ctx.font = "bold 80px 'Pretendard'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillStyle = "rgba(251, 191, 36, 0.15)";
+                ctx.fillText("MILKY WAY!", canvas.width / 2, canvas.height / 2);
             }
             
             drawGiantClover(); 
@@ -400,7 +405,8 @@ GAME_HTML = """
             drawHiddenFruits(); 
             drawBonusFoods(); 
             updateAndDrawParticles(); 
-            drawPlayerPath(); // 뱀 대신 전투기 렌더링 호출
+            
+            drawTrainPath(); 
         }
 
         function createParticles(x, y, color) {
@@ -426,82 +432,152 @@ GAME_HTML = """
             }
         }
 
-        // --- 🚀 [NEW] 네온 사이버 전투기 렌더링 ---
-        function drawPlayerPath() {
+        // --- 🚂 은하철도 999 렌더링 ---
+        function drawTrainPath() {
             if (snake.length === 0) return;
             
-            let strokeColor = isReversedControls ? COLOR_NEON_RED : COLOR_NEON_GREEN;
+            let strokeColor = isReversedControls ? COLOR_NEON_RED : COLOR_NEON_BLUE;
             let w = Math.max(4, (gridSize - 4) * snakeSizeMod);
 
-            // 1. 빛의 궤적 (꼬리)
-            ctx.beginPath();
-            ctx.moveTo(snake[0].x + gridSize/2, snake[0].y + gridSize/2);
-            for(let i=1; i<snake.length; i++) {
-                ctx.lineTo(snake[i].x + gridSize/2, snake[i].y + gridSize/2);
+            // 1. 객차(꼬리) 그리기
+            for (let i = snake.length - 1; i >= 1; i--) {
+                let part = snake[i];
+                let prev = snake[i-1];
+                
+                ctx.save();
+                ctx.translate(part.x + gridSize/2, part.y + gridSize/2);
+                
+                let angle = Math.atan2(prev.y - part.y, prev.x - part.x);
+                ctx.rotate(angle);
+                
+                // 연결고리
+                ctx.strokeStyle = "#475569";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(w*0.5, 0); ctx.lineTo(w*1.0, 0);
+                ctx.stroke();
+
+                // 객차 본체
+                ctx.fillStyle = "#1e293b";
+                ctx.strokeStyle = strokeColor;
+                ctx.lineWidth = 1.5;
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = strokeColor;
+                
+                ctx.beginPath();
+                ctx.rect(-w*0.4, -w*0.35, w*0.9, w*0.7);
+                ctx.fill(); ctx.stroke();
+                
+                // 창문 불빛
+                ctx.fillStyle = COLOR_NEON_GOLD;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = COLOR_NEON_GOLD;
+                ctx.fillRect(-w*0.2, -w*0.15, w*0.2, w*0.3);
+                ctx.fillRect(w*0.1, -w*0.15, w*0.2, w*0.3);
+
+                ctx.restore();
             }
-            ctx.lineCap = "round"; ctx.lineJoin = "round";
-            ctx.lineWidth = w * 0.7; // 꼬리는 본체보다 살짝 얇게
-            ctx.strokeStyle = strokeColor;
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = strokeColor;
-            ctx.stroke();
-            ctx.shadowBlur = 0;
             
-            // 2. 🚀 사이버 전투기 (머리)
+            // 2. 증기기관차 (머리) 그리기
             let headX = snake[0].x + gridSize/2;
             let headY = snake[0].y + gridSize/2;
 
             ctx.save();
             ctx.translate(headX, headY);
 
-            // 이동 방향(dx, dy)을 기준으로 캔버스 회전
-            let angle = 0;
-            if (dx > 0) angle = 0;                  // 오른쪽
-            else if (dx < 0) angle = Math.PI;       // 왼쪽
-            else if (dy > 0) angle = Math.PI / 2;   // 아래
-            else if (dy < 0) angle = -Math.PI / 2;  // 위
-            ctx.rotate(angle);
+            let headAngle = 0;
+            if (dx > 0) headAngle = 0;                  // 오른쪽
+            else if (dx < 0) headAngle = Math.PI;       // 왼쪽
+            else if (dy > 0) headAngle = Math.PI / 2;   // 아래
+            else if (dy < 0) headAngle = -Math.PI / 2;  // 위
+            ctx.rotate(headAngle);
 
-            // 전투기 본체 (에어로 다이내믹 디자인)
-            ctx.fillStyle = strokeColor;
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = strokeColor;
-            ctx.beginPath();
-            ctx.moveTo(w * 1.1, 0);              // 기수 (앞코)
-            ctx.lineTo(-w * 0.5, w * 0.8);       // 우측 날개
-            ctx.lineTo(-w * 0.1, 0);             // 후방 엔진쪽 홈
-            ctx.lineTo(-w * 0.5, -w * 0.8);      // 좌측 날개
-            ctx.closePath();
-            ctx.fill();
-
-            // 전투기 캐노피(조종석)
-            ctx.fillStyle = "#ffffff";
-            ctx.shadowBlur = 5;
-            ctx.shadowColor = "#ffffff";
-            ctx.beginPath();
-            ctx.ellipse(w * 0.2, 0, w * 0.4, w * 0.15, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            // 부스터 불꽃 (엔진)
-            ctx.fillStyle = COLOR_NEON_GOLD;
+            ctx.fillStyle = "#0f172a";
+            ctx.strokeStyle = COLOR_NEON_GOLD;
+            ctx.lineWidth = 2;
             ctx.shadowBlur = 10;
             ctx.shadowColor = COLOR_NEON_GOLD;
+
             ctx.beginPath();
-            ctx.moveTo(-w * 0.2, 0);
-            ctx.lineTo(-w * 0.8, w * 0.3);
-            ctx.lineTo(-w * 1.4, 0);             // 꼬리 불꽃 끝점
-            ctx.lineTo(-w * 0.8, -w * 0.3);
+            ctx.rect(-w*0.4, -w*0.35, w*1.0, w*0.7);
+            ctx.fill(); ctx.stroke();
+
+            ctx.beginPath();
+            ctx.rect(-w*0.6, -w*0.45, w*0.4, w*0.9);
+            ctx.fill(); ctx.stroke();
+            
+            ctx.fillStyle = COLOR_NEON_BLUE;
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = COLOR_NEON_BLUE;
+            ctx.fillRect(-w*0.45, -w*0.25, w*0.15, w*0.5);
+
+            ctx.fillStyle = "#1e293b";
+            ctx.strokeStyle = COLOR_NEON_GOLD;
+            ctx.beginPath();
+            ctx.rect(w*0.2, -w*0.55, w*0.25, w*0.2);
+            ctx.fill(); ctx.stroke();
+
+            ctx.fillStyle = "#334155";
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.moveTo(w*0.6, -w*0.3);
+            ctx.lineTo(w*0.9, 0);
+            ctx.lineTo(w*0.6, w*0.3);
             ctx.closePath();
+            ctx.fill(); ctx.stroke();
+
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = COLOR_NEON_GOLD;
+            ctx.beginPath();
+            ctx.arc(w*0.6, 0, w*0.15, 0, Math.PI*2);
             ctx.fill();
 
-            ctx.restore(); // 회전 및 좌표축 복구
+            ctx.globalAlpha = 0.25;
+            ctx.fillStyle = COLOR_NEON_GOLD;
+            ctx.beginPath();
+            ctx.moveTo(w*0.7, 0);
+            ctx.lineTo(w*3.5, -w*1.5);
+            ctx.lineTo(w*3.5, w*1.5);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            if (!isPaused && !isGameOver && Math.random() < 0.3) {
+                particles.push({
+                    x: headX, 
+                    y: headY,
+                    vx: -dx * 0.1 + (Math.random()-0.5)*1.5,
+                    vy: -dy * 0.1 + (Math.random()-0.5)*1.5,
+                    life: 1.0, 
+                    color: "rgba(200, 210, 220, 0.6)"
+                });
+            }
+
+            ctx.restore(); 
         }
 
+        // --- 🛤️ [NEW] 빛의 선로(기찻길) 렌더링 ---
         function drawNormalFoods() { 
-            ctx.fillStyle = COLOR_NEON_RED; 
-            ctx.shadowBlur = 15; ctx.shadowColor = COLOR_NEON_RED;
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.9)"; // 밝은 빛깔
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = COLOR_NEON_BLUE; // 푸른 네온 궤도 빛
+            
             normalFoods.forEach(food => {
-                ctx.beginPath(); ctx.arc(food.x + gridSize/2, food.y + gridSize/2, gridSize/2 - 2, 0, Math.PI*2); ctx.fill();
+                let fx = food.x;
+                let fy = food.y;
+                
+                ctx.beginPath();
+                // 세로 레일 2개
+                ctx.moveTo(fx + 6, fy + 3); ctx.lineTo(fx + 6, fy + 17);
+                ctx.moveTo(fx + 14, fy + 3); ctx.lineTo(fx + 14, fy + 17);
+                
+                // 가로 침목 3개
+                ctx.moveTo(fx + 4, fy + 6); ctx.lineTo(fx + 16, fy + 6);
+                ctx.moveTo(fx + 4, fy + 10); ctx.lineTo(fx + 16, fy + 10);
+                ctx.moveTo(fx + 4, fy + 14); ctx.lineTo(fx + 16, fy + 14);
+                
+                ctx.stroke();
             });
             ctx.shadowBlur = 0;
         }
@@ -518,10 +594,10 @@ GAME_HTML = """
                 ctx.save();
                 ctx.beginPath(); ctx.rect(200, 200, 200, 200); ctx.clip();
                 ctx.font = "180px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillText("🔋", 300, 310); // 클로버 대신 거대 배터리 아이콘
+                ctx.fillText("🌌", 300, 310); 
                 ctx.restore(); 
                 
-                ctx.fillStyle = "#0b1120";
+                ctx.fillStyle = "#020617";
                 for (let r = 0; r < 10; r++) {
                     for (let c = 0; c < 10; c++) {
                         let bx = 200 + c * gridSize; let by = 200 + r * gridSize;
@@ -548,8 +624,8 @@ GAME_HTML = """
             if (score >= 250 && !gridTriggered) {
                 gridTriggered = true; isGridTime = true;
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🌐 시스템 해킹! 10초간 스캐닝 그리드 활성화!";
-                effectDisplay.style.color = "var(--neon-blue)";
+                effectDisplay.innerText = "🌐 항법 컴퓨터 가동! 우주 궤도 10초간 표시!";
+                effectDisplay.style.color = COLOR_NEON_BLUE;
                 gridTimeout = setTimeout(() => { isGridTime = false; if (!isGameOver && !isPaused && !isBonusTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 10000); 
             }
 
@@ -557,8 +633,8 @@ GAME_HTML = """
                 cloverSpawned = true; isGiantCloverActive = true; giantCloverBlocks = [];
                 for (let r = 0; r < 10; r++) { for (let c = 0; c < 10; c++) { giantCloverBlocks.push({ x: 200 + c * gridSize, y: 200 + r * gridSize }); } }
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🔋 메가 코어 팩 출현! 정중앙 5초간 등장!"; 
-                effectDisplay.style.color = "var(--neon-green)";
+                effectDisplay.innerText = "🌌 안드로메다 정거장 출현! 중앙으로 집결!"; 
+                effectDisplay.style.color = COLOR_NEON_GREEN;
                 cloverTimeout = setTimeout(() => {
                     isGiantCloverActive = false; giantCloverBlocks = [];
                     if (!isGameOver && !isPaused && !isGridTime && !isBonusTime) effectDisplay.innerText = "";
@@ -591,7 +667,8 @@ GAME_HTML = """
                     score += 10; normalFoods.splice(i, 1); updateGameDifficulty(); resetHungerTimer();
                     if (hiddenFruits.length < 3 && Math.random() < 0.4) spawnHiddenFruit();
                     ateSomething = true;
-                    createParticles(f.x, f.y, COLOR_NEON_RED);
+                    // 선로 습득 시 푸른 파티클 생성
+                    createParticles(f.x, f.y, COLOR_NEON_BLUE);
                 }
             }
             
@@ -612,7 +689,7 @@ GAME_HTML = """
                 isBonusTime = true; bonusFoods = [];
                 for (let i = 0; i < spawnCount; i++) { bonusFoods.push(generateValidPosition()); }
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = `🎉 FEVER TIME! 별 조각 ${spawnCount}개 드랍!`; effectDisplay.style.color = "var(--neon-gold)";
+                effectDisplay.innerText = `🎉 유성우 접근! 별 조각 ${spawnCount}개 드랍!`; effectDisplay.style.color = COLOR_NEON_GOLD;
                 bonusTimeTimeout = setTimeout(() => {
                     isBonusTime = false; bonusFoods = [];
                     if (!isGameOver && !isPaused && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = "";
@@ -623,37 +700,37 @@ GAME_HTML = """
         function applyHiddenFruitEffect(type) {
             const effectDisplay = document.getElementById("itemEffect");
             if (type === 'blind') {
-                effectDisplay.innerText = "⚠️ 레이더 재밍! 3초간 시야 암전!"; effectDisplay.style.color = "#94a3b8";
+                effectDisplay.innerText = "⚠️ 암흑 성운 진입! 3초간 시야 차단!"; effectDisplay.style.color = "#94a3b8";
                 document.getElementById("blindOverlay").style.display = "flex";
                 if(blindTimeout) clearTimeout(blindTimeout);
                 blindTimeout = setTimeout(() => { document.getElementById("blindOverlay").style.display = "none"; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 3000);
             } else if (type === 'tunnel') {
-                effectDisplay.innerText = "🌀 웜홀 진입! 기수 반전!"; effectDisplay.style.color = "#c084fc";
+                effectDisplay.innerText = "🌀 블랙홀 진입! 기수 반전!"; effectDisplay.style.color = "#c084fc";
                 if (snake.length > 1) { const tail = snake[snake.length - 1]; const beforeTail = snake[snake.length - 2]; dx = tail.x - beforeTail.x; dy = tail.y - beforeTail.y; snake.reverse(); } else { dx = -dx; dy = -dy; }
             } else if (type === 'reverse') {
-                effectDisplay.innerText = "☣️ 항법장치 해킹! 3초간 조작 반전!"; effectDisplay.style.color = "var(--neon-red)";
+                effectDisplay.innerText = "☣️ 중력 이상! 3초간 조작 반전!"; effectDisplay.style.color = COLOR_NEON_RED;
                 isReversedControls = true;
                 if(controlTimeout) clearTimeout(controlTimeout);
                 controlTimeout = setTimeout(() => { isReversedControls = false; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 3000);
             } else if (type === 'caterpillar') {
-                if (Math.random() < 0.5) { effectDisplay.innerText = "💪 쉴드 전개! 자석 싹쓸이 모드 (5초)"; effectDisplay.style.color = "var(--neon-blue)"; snakeSizeMod = 1.8; } 
-                else { effectDisplay.innerText = "📉 스텔스 모드! 기체가 작아집니다!"; effectDisplay.style.color = "var(--neon-gold)"; snakeSizeMod = 0.5; }
+                if (Math.random() < 0.5) { effectDisplay.innerText = "💪 전방위 실드! 주변 선로 싹쓸이 (5초)"; effectDisplay.style.color = COLOR_NEON_BLUE; snakeSizeMod = 1.8; } 
+                else { effectDisplay.innerText = "📉 초공간 도약! 기차가 작아집니다!"; effectDisplay.style.color = COLOR_NEON_GOLD; snakeSizeMod = 0.5; }
                 if(sizeTimeout) clearTimeout(sizeTimeout);
                 sizeTimeout = setTimeout(() => { snakeSizeMod = 1; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'bonus') {
-                score += 50; effectDisplay.innerText = "💎 데이터 파편 +50점!"; effectDisplay.style.color = "var(--neon-gold)";
+                score += 50; effectDisplay.innerText = "💎 우주 광석 획득 +50명!"; effectDisplay.style.color = COLOR_NEON_GOLD;
             } else if (type === 'slow') {
-                effectDisplay.innerText = "🐢 냉각수 가동! 속도 저하 (5초)"; effectDisplay.style.color = "var(--neon-blue)";
+                effectDisplay.innerText = "🐢 우주 기류 탑승! 속도 저하 (5초)"; effectDisplay.style.color = COLOR_NEON_BLUE;
                 speedMod = 1.6; updateSpeed();
                 setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'fast') {
-                effectDisplay.innerText = "⚡ 오버클럭! 속도 급상승 (5초)"; effectDisplay.style.color = "#c084fc";
+                effectDisplay.innerText = "⚡ 하이퍼 드라이브! 속도 급상승 (5초)"; effectDisplay.style.color = "#c084fc";
                 speedMod = 0.5; updateSpeed();
                 setTimeout(() => { if(!isGameOver && !isPaused) { speedMod = 1; updateSpeed(); } if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'penalty') {
-                score = Math.max(0, score - 30); effectDisplay.innerText = "💀 배드섹터! 감점 -30점!"; effectDisplay.style.color = "var(--neon-red)";
+                score = Math.max(0, score - 30); effectDisplay.innerText = "💀 우주 해적 조우! 승객 -30명!"; effectDisplay.style.color = COLOR_NEON_RED;
             } else if (type === 'super') {
-                score += 100; effectDisplay.innerText = "🚀 코어 해킹! 슈퍼 보너스 +100점!"; effectDisplay.style.color = "var(--neon-green)";
+                score += 100; effectDisplay.innerText = "🚀 메텔의 가호! 슈퍼 보너스 +100명!"; effectDisplay.style.color = COLOR_NEON_GREEN;
             }
             updateGameDifficulty(); 
             setTimeout(() => { if(!['slow','fast','blind','reverse','caterpillar'].includes(type) && !isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 2500);
@@ -687,7 +764,7 @@ GAME_HTML = """
             lives--;
             if (lives > 0) {
                 reduceSnakeBody(3);
-                alert(`⚠️ 충돌 발생! 실드 내구도 손실 (현재 목숨: ${lives})`); resetSnakePosition();
+                alert(`⚠️ 소행성 충돌! 장갑 내구도 감소 (현재 남은 장갑: ${lives})`); resetSnakePosition();
             } else {
                 updateUI(); endGame();
             }
@@ -729,13 +806,13 @@ GAME_HTML = """
             document.getElementById("restartContainer").style.display = "flex";
             
             renderFrame(false); 
-            ctx.fillStyle = "rgba(11, 17, 32, 0.8)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "rgba(2, 6, 23, 0.8)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = COLOR_NEON_RED; ctx.font = "bold 50px 'Pretendard'";
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.shadowBlur = 15; ctx.shadowColor = COLOR_NEON_RED;
-            ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
+            ctx.fillText("운행 종료 (GAME OVER)", canvas.width / 2, canvas.height / 2 - 20);
             ctx.fillStyle = "white"; ctx.font = "24px 'Pretendard'"; ctx.shadowBlur = 0;
-            ctx.fillText(`SCORE : ${score}`, canvas.width / 2, canvas.height / 2 + 30);
+            ctx.fillText(`탑승 승객 : ${score}명`, canvas.width / 2, canvas.height / 2 + 30);
             
             sendToStreamlit("streamlit:setComponentValue", { value: { nickname: nickname, score: score, timestamp: Date.now() } });
         }
@@ -758,11 +835,11 @@ GAME_HTML = """
             if (!isPaused && !pauseUsed) {
                 isPaused = true; pauseUsed = true; 
                 if (hungerInterval) clearInterval(hungerInterval);
-                ctx.fillStyle = "rgba(11, 17, 32, 0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "rgba(2, 6, 23, 0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = COLOR_NEON_GOLD; ctx.font = "bold 50px 'Pretendard'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillText("⏸️ PAUSE", canvas.width / 2, canvas.height / 2 - 20);
+                ctx.fillText("⏸️ 운행 일시정지", canvas.width / 2, canvas.height / 2 - 20);
                 ctx.fillStyle = "#94a3b8"; ctx.font = "20px 'Pretendard'";
-                ctx.fillText("(게임당 1번만 사용 가능!)", canvas.width / 2, canvas.height / 2 + 30);
+                ctx.fillText("(운행당 1번만 사용 가능!)", canvas.width / 2, canvas.height / 2 + 30);
             } else if (isPaused) {
                 isPaused = false;
                 lastRenderTime = performance.now();
@@ -793,14 +870,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v37)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v39)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v37")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v39")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v37", path=component_dir)
+snake_game = components.declare_component("snake_v39", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -834,8 +911,8 @@ def save_score(nickname, score):
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("⚡ 네온 스피드 러시 (Neon Speed Rush) 🚀")
-st.info("🏆 사이버 전투기를 조종하여 빛의 속도를 지배하세요!")
+st.title("⚡ 은하철도 스피드 러시 (Galaxy Express) 🚂")
+st.info("🏆 999호의 차장이 되어 끝없는 우주 궤도를 질주하세요!")
 
 col_empty, col1, col2 = st.columns([0.05, 2.3, 1.65])
 
@@ -853,52 +930,52 @@ with col1:
         if "last_ts" not in st.session_state or st.session_state["last_ts"] != ts:
             save_score(nickname, score)
             st.session_state["last_ts"] = ts
-            st.success(f"🎉 {nickname}님! {score}점 랭킹 등록 완료!")
+            st.success(f"🎉 {nickname} 차장님! {score}명 탑승 완료 (랭킹 등록)!")
             st.rerun()
 
 with col2:
-    with st.expander("📖 게임 가이드 보기 (우주 전투기 모드)", expanded=True):
-        tab1, tab2, tab3 = st.tabs(["🕹️ 설명", "📦 아이템", "⚠️ 주의사항"])
+    with st.expander("📖 게임 가이드 보기 (은하철도 999 모드)", expanded=True):
+        tab1, tab2, tab3 = st.tabs(["🕹️ 설명", "📦 수화물(아이템)", "⚠️ 주의사항"])
         
         with tab1:
             st.markdown("""
             * **조작 방법**: 키보드 방향키 (PC) 또는 화면 하단 십자 버튼 (모바일)
-            * **사이버 전투기!**: 네온 빛의 궤적을 남기며 부드럽게 비행합니다.
-            * **일시정지**: 게임 중 위급할 때 **`[P]` 키 또는 온스크린 `[⏸️]` 버튼**을 누르면 일시정지됩니다. (1게임당 **딱 1번만!**)
-            * **난이도 상승 (Speed Rush!)**: 
-              * 점수가 **50점** 오를 때마다 기체의 속도가 약간씩 상승!
-            * **목숨(실드) 시스템**: 총 **3개(❤️❤️❤️)**의 실드!
-              * 충돌 시 점수 감점 없이 **궤적(꼬리)만 3칸 줄어든 채** 중앙에서 부활합니다.
-            * 🌐 **250점 스캐닝 그리드!**: 반투명 격자가 나타나 길을 안내해 줍니다.
-            * 🎉 **500점 피버 타임!**: 점수가 500단위에 도달하면 **10초간** ⭐️별 조각이 쏟아집니다.
+            * **우주 열차 출발!**: 증기기관차가 헤드라이트를 비추며 매끄럽게 우주 궤도를 달립니다.
+            * **일시정지**: 운행 중 위급할 때 **`[P]` 키 또는 온스크린 `[⏸️]` 버튼**을 누르면 정차합니다. (1게임당 **딱 1번만!**)
+            * **하이퍼 스피드!**: 
+              * 승객을 **50명(점수)** 태울 때마다 열차 속도가 서서히 빨라집니다!
+            * **장갑(목숨) 시스템**: 총 **3겹(🛡️🛡️🛡️)**의 열차 장갑!
+              * 소행성과 충돌 시 게임오버 대신 **객차(꼬리)만 3칸 터져나가며** 중앙에서 부활합니다.
+            * 🌐 **250명 달성 스캐닝 그리드!**: 반투명 우주 궤도(격자)가 10초간 나타나 길을 안내합니다.
+            * 🎉 **500명 달성 유성우!**: 점수가 500단위에 도달하면 **10초간** ⭐️별 조각이 무더기로 쏟아집니다.
             """)
             
         with tab2:
             st.markdown("""
-            **미스터리 상자(📦)** 안에는 아래 효과가 숨겨져 있습니다. 
+            **미스터리 수화물(📦)** 안에는 아래 이벤트가 숨겨져 있습니다. 
             
             | 아이템 | 효과 설명 |
             | :--- | :--- |
-            | 🔋 **메가 코어 팩** | 궤적 **30칸** 달성 시 화면 중앙에 거대한 배터리 팩 출현! |
-            | 💎 **데이터 파편** | 점수 **+50점** 획득 |
-            | 🚀 **코어 해킹** | 점수 **+100점** 획득 |
-            | 🐢 **냉각수 가동** | 5초간 속도 **대폭 감소** |
-            | ⚡ **오버클럭** | 5초간 속도 **급상승** |
-            | ⚠️ **레이더 재밍** | 3초간 눈앞이 캄캄해짐 (암전) |
-            | 🌀 **웜홀 진입** | 전투기의 기수와 궤적이 뒤바뀌며 **방향 즉시 반전** |
-            | ☣️ **항법장치 해킹** | 3초간 **방향키 조작 반대** |
-            | 💪 **쉴드 전개** | 5초간 랜덤으로 **아이템 싹쓸이 자석 모드** 또는 스텔스(축소) |
-            | 💀 **배드섹터** | 점수 **-30점** 감점 |
+            | 🌌 **안드로메다 정거장** | 꼬리 **30칸** 달성 시 화면 중앙에 거대한 은하수 역 출현! |
+            | 💎 **우주 광석** | 승객 **+50명(점수)** 탑승 |
+            | 🚀 **메텔의 가호** | 승객 **+100명(점수)** 특급 보너스 |
+            | 🐢 **우주 기류 탑승** | 5초간 속도 **대폭 감소** |
+            | ⚡ **하이퍼 드라이브** | 5초간 속도 **급상승** |
+            | ⚠️ **암흑 성운** | 3초간 눈앞이 캄캄해짐 (시야 암전) |
+            | 🌀 **블랙홀 진입** | 기관차와 꼬리가 뒤바뀌며 **방향 즉시 반전** |
+            | ☣️ **중력 이상** | 3초간 **방향키 조작 반대** |
+            | 💪 **전방위 실드** | 5초간 랜덤으로 **아이템 싹쓸이 자석 모드** 또는 초공간 도약(기체 축소) |
+            | 💀 **해적 조우** | 승객 **-30명** 하차 (감점) |
             """)
             
         with tab3:
             st.markdown("""
-            1. **⏳ 10초 에너지 고갈 타이머!**
-               * 10초 안에 에너지를 획득하지 못하면 기체가 과부하에 걸려 **페널티로 궤적(꼬리)이 4칸 늘어납니다.** (꼬리가 길어질수록 충돌 위험이 상승합니다!)
+            1. **🛤️ 10초 선로(에너지) 고갈 타이머!**
+               * 10초 안에 선로를 이어가지 못하면 열차가 경로를 이탈하며, 강제 궤도 수정 페널티로 **꼬리(객차)가 4칸 강제로 늘어납니다.** (꼬리가 길어질수록 갇힐 위험이 커집니다!)
             2. **💪 쉴드 전개 자석 모드**
-               * 쉴드 전개 상태일 때는 주변을 스치기만 해도 모든 아이템을 진공청소기처럼 싹쓸이합니다!
-            3. **💥 전략적 충돌**
-               * 갇힐 위기라면 벽에 박으세요! 게임오버 대신 **궤적(꼬리)만 3칸 초기화** 되면서 생존할 수 있습니다.
+               * 쉴드 전개 상태일 때는 주변을 스치기만 해도 선로와 아이템을 자석처럼 싹쓸이합니다!
+            3. **💥 꼬리 자르기 전략**
+               * 갇힐 위기라면 차라리 벽이나 꼬리에 박으세요! 게임오버 대신 **객차만 3량 버리면서** 살아남을 수 있습니다.
             """)
 
     if "admin_mode" not in st.session_state:
@@ -906,7 +983,7 @@ with col2:
 
     title_col, btn_col = st.columns([0.85, 0.15])
     with title_col:
-        st.subheader("🏆 명예의 전당 (TOP 10)")
+        st.subheader("🏆 명예의 전당 (우수 차장 TOP 10)")
     with btn_col:
         st.write("")
         if st.button("✅", help="관리자 도구"):
@@ -914,8 +991,8 @@ with col2:
 
     if st.session_state.admin_mode:
         with st.container():
-            st.markdown("#### 🛠️ 관리자 도구")
-            admin_password = st.text_input("관리자 비밀번호를 입력하세요", type="password")
+            st.markdown("#### 🛠️ 은하철도 관리국")
+            admin_password = st.text_input("국장 비밀번호를 입력하세요", type="password")
             if admin_password == "880610":
                 st.success("✅ 인증 완료!")
                 if st.button("🚨 랭킹 데이터 전체 초기화"):
@@ -931,16 +1008,16 @@ with col2:
     scores = load_scores()
     
     if not scores:
-        st.write("아직 랭킹에 등록된 기록이 없습니다. 첫 번째 에이스 파일럿이 되어보세요!")
+        st.write("아직 랭킹에 등록된 운행 기록이 없습니다. 첫 번째 전설의 차장이 되어보세요!")
     else:
         board_html = "<div style='display: flex; flex-direction: column; gap: 8px;'>"
         for i, s in enumerate(scores):
             medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}위"
-            date_str = f" <span style='font-size: 12px; font-weight: normal; color: #888;'>👑 (달성: {s.get('date', '알수없음')})</span>" if i == 0 and "date" in s else ""
+            date_str = f" <span style='font-size: 12px; font-weight: normal; color: #888;'>👑 (운행일: {s.get('date', '알수없음')})</span>" if i == 0 and "date" in s else ""
             
             board_html += "<div style='border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 8px;'>"
             board_html += f"<div style='font-weight: bold; font-size: 16px; margin-bottom: 2px;'>{medal} | {s['nickname']}{date_str}</div>"
-            board_html += f"<div style='font-size: 13px; color: gray;'>Score: {s['score']} pts</div>"
+            board_html += f"<div style='font-size: 13px; color: gray;'>탑승객: {s['score']} 명</div>"
             board_html += "</div>"
             
         board_html += "</div>"
