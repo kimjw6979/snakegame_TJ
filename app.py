@@ -6,7 +6,7 @@ import time
 import datetime
 
 # 페이지 설정
-st.set_page_config(page_title="TJ 네온 스피드 러시", page_icon="🐍", layout="wide")
+st.set_page_config(page_title="TJ 네온 스피드 러시", page_icon="🚀", layout="wide")
 
 # -------------------------------------------------------------
 # 🚫 [상단 툴바 및 기본 메뉴 숨기기 CSS]
@@ -228,7 +228,6 @@ GAME_HTML = """
         let accumulator = 0;
         let currentTickRate = 100;
 
-        // JS Canvas 내부에서는 CSS 변수(var) 인식이 안되므로 헥스코드 직접 지정
         const COLOR_NEON_GREEN = "#10b981";
         const COLOR_NEON_RED = "#f43f5e";
         const COLOR_NEON_GOLD = "#fbbf24";
@@ -259,7 +258,6 @@ GAME_HTML = """
             normalFoods = [generateValidPosition()];
             hiddenFruits = [];
             
-            // 화면이 검게 나오는 것을 방지하기 위해 초기 세팅 후 1프레임 렌더링!
             renderFrame(false); 
         }
 
@@ -309,11 +307,17 @@ GAME_HTML = """
                 document.getElementById("foodTimerDisplay").innerText = hungerTimer;
                 
                 if (hungerTimer <= 0) {
-                    reduceSnakeBody(2);
+                    // [변경점] 타이머 종료 시 4칸 증가(과부하 페널티)
+                    for(let i=0; i<4; i++) {
+                        let tail = snake[snake.length-1];
+                        snake.push({x: tail.x, y: tail.y});
+                    }
+                    
                     const effectDisplay = document.getElementById("itemEffect");
-                    effectDisplay.innerText = "⚠️ SYSTEM WARNING: 에너지 고갈! 몸통 감소!"; 
-                    effectDisplay.style.color = "var(--neon-red)"; // DOM은 CSS변수 가능
+                    effectDisplay.innerText = "⚠️ SYSTEM WARNING: 에너지 과부하! 궤적 4칸 연장!"; 
+                    effectDisplay.style.color = "var(--neon-red)"; 
                     setTimeout(() => { if(effectDisplay.innerText.includes("에너지") && !isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 2000);
+                    
                     hungerTimer = 10;
                     document.getElementById("foodTimerDisplay").innerText = hungerTimer;
                 }
@@ -396,7 +400,7 @@ GAME_HTML = """
             drawHiddenFruits(); 
             drawBonusFoods(); 
             updateAndDrawParticles(); 
-            drawSnakePath();
+            drawPlayerPath(); // 뱀 대신 전투기 렌더링 호출
         }
 
         function createParticles(x, y, color) {
@@ -422,36 +426,35 @@ GAME_HTML = """
             }
         }
 
-        function drawSnakePath() {
+        // --- 🚀 [NEW] 네온 사이버 전투기 렌더링 ---
+        function drawPlayerPath() {
             if (snake.length === 0) return;
             
             let strokeColor = isReversedControls ? COLOR_NEON_RED : COLOR_NEON_GREEN;
             let w = Math.max(4, (gridSize - 4) * snakeSizeMod);
 
-            // 1. 몸통 그리기
+            // 1. 빛의 궤적 (꼬리)
             ctx.beginPath();
             ctx.moveTo(snake[0].x + gridSize/2, snake[0].y + gridSize/2);
             for(let i=1; i<snake.length; i++) {
                 ctx.lineTo(snake[i].x + gridSize/2, snake[i].y + gridSize/2);
             }
-            
             ctx.lineCap = "round"; ctx.lineJoin = "round";
-            ctx.lineWidth = w;
+            ctx.lineWidth = w * 0.7; // 꼬리는 본체보다 살짝 얇게
             ctx.strokeStyle = strokeColor;
-            
             ctx.shadowBlur = 15;
             ctx.shadowColor = strokeColor;
             ctx.stroke();
             ctx.shadowBlur = 0;
             
-            // 2. ✨ 진짜 뱀 머리 그리기 (이동 방향에 따라 회전)
+            // 2. 🚀 사이버 전투기 (머리)
             let headX = snake[0].x + gridSize/2;
             let headY = snake[0].y + gridSize/2;
 
             ctx.save();
             ctx.translate(headX, headY);
 
-            // 현재 이동 방향(dx, dy)을 기준으로 캔버스 회전
+            // 이동 방향(dx, dy)을 기준으로 캔버스 회전
             let angle = 0;
             if (dx > 0) angle = 0;                  // 오른쪽
             else if (dx < 0) angle = Math.PI;       // 왼쪽
@@ -459,46 +462,37 @@ GAME_HTML = """
             else if (dy < 0) angle = -Math.PI / 2;  // 위
             ctx.rotate(angle);
 
-            // 머리 윤곽 (살짝 납작한 타원형)
+            // 전투기 본체 (에어로 다이내믹 디자인)
             ctx.fillStyle = strokeColor;
             ctx.shadowBlur = 15;
             ctx.shadowColor = strokeColor;
             ctx.beginPath();
-            ctx.ellipse(0, 0, w * 0.7, w * 0.55, 0, 0, Math.PI * 2);
+            ctx.moveTo(w * 1.1, 0);              // 기수 (앞코)
+            ctx.lineTo(-w * 0.5, w * 0.8);       // 우측 날개
+            ctx.lineTo(-w * 0.1, 0);             // 후방 엔진쪽 홈
+            ctx.lineTo(-w * 0.5, -w * 0.8);      // 좌측 날개
+            ctx.closePath();
             ctx.fill();
 
-            // 하얀색 눈
+            // 전투기 캐노피(조종석)
             ctx.fillStyle = "#ffffff";
             ctx.shadowBlur = 5;
             ctx.shadowColor = "#ffffff";
-            
-            ctx.beginPath(); // 왼쪽 눈
-            ctx.arc(w * 0.2, -w * 0.25, w * 0.15, 0, Math.PI*2); 
-            ctx.fill();
-            
-            ctx.beginPath(); // 오른쪽 눈
-            ctx.arc(w * 0.2, w * 0.25, w * 0.15, 0, Math.PI*2); 
-            ctx.fill();
-
-            // 까만색 동공 (뱀 특유의 세로로 찢어진 눈)
-            ctx.fillStyle = "#000000";
-            ctx.shadowBlur = 0;
-            ctx.fillRect(w * 0.15, -w * 0.35, w * 0.05, w * 0.2); // 왼쪽 동공
-            ctx.fillRect(w * 0.15, w * 0.15, w * 0.05, w * 0.2);  // 오른쪽 동공
-
-            // 갈라지며 낼름거리는 붉은 혀
-            ctx.strokeStyle = COLOR_NEON_RED;
-            ctx.lineWidth = 1.5;
-            ctx.shadowBlur = 5;
-            ctx.shadowColor = COLOR_NEON_RED;
-            
             ctx.beginPath();
-            ctx.moveTo(w * 0.7, 0);         // 입에서 출발
-            ctx.lineTo(w * 1.2, 0);         // 혀 기둥
-            ctx.lineTo(w * 1.4, -w * 0.15); // 위쪽으로 갈라짐
-            ctx.moveTo(w * 1.2, 0);         // 다시 갈라지는 곳으로
-            ctx.lineTo(w * 1.4, w * 0.15);  // 아래쪽으로 갈라짐
-            ctx.stroke();
+            ctx.ellipse(w * 0.2, 0, w * 0.4, w * 0.15, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 부스터 불꽃 (엔진)
+            ctx.fillStyle = COLOR_NEON_GOLD;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = COLOR_NEON_GOLD;
+            ctx.beginPath();
+            ctx.moveTo(-w * 0.2, 0);
+            ctx.lineTo(-w * 0.8, w * 0.3);
+            ctx.lineTo(-w * 1.4, 0);             // 꼬리 불꽃 끝점
+            ctx.lineTo(-w * 0.8, -w * 0.3);
+            ctx.closePath();
+            ctx.fill();
 
             ctx.restore(); // 회전 및 좌표축 복구
         }
@@ -524,7 +518,7 @@ GAME_HTML = """
                 ctx.save();
                 ctx.beginPath(); ctx.rect(200, 200, 200, 200); ctx.clip();
                 ctx.font = "180px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillText("🍀", 300, 310); 
+                ctx.fillText("🔋", 300, 310); // 클로버 대신 거대 배터리 아이콘
                 ctx.restore(); 
                 
                 ctx.fillStyle = "#0b1120";
@@ -563,7 +557,7 @@ GAME_HTML = """
                 cloverSpawned = true; isGiantCloverActive = true; giantCloverBlocks = [];
                 for (let r = 0; r < 10; r++) { for (let c = 0; c < 10; c++) { giantCloverBlocks.push({ x: 200 + c * gridSize, y: 200 + r * gridSize }); } }
                 const effectDisplay = document.getElementById("itemEffect");
-                effectDisplay.innerText = "🍀 데이터 덩어리 발견! 정중앙 5초간 출현!"; 
+                effectDisplay.innerText = "🔋 메가 코어 팩 출현! 정중앙 5초간 등장!"; 
                 effectDisplay.style.color = "var(--neon-green)";
                 cloverTimeout = setTimeout(() => {
                     isGiantCloverActive = false; giantCloverBlocks = [];
@@ -629,25 +623,25 @@ GAME_HTML = """
         function applyHiddenFruitEffect(type) {
             const effectDisplay = document.getElementById("itemEffect");
             if (type === 'blind') {
-                effectDisplay.innerText = "⚠️ 시야 해킹! 3초간 암흑!"; effectDisplay.style.color = "#94a3b8";
+                effectDisplay.innerText = "⚠️ 레이더 재밍! 3초간 시야 암전!"; effectDisplay.style.color = "#94a3b8";
                 document.getElementById("blindOverlay").style.display = "flex";
                 if(blindTimeout) clearTimeout(blindTimeout);
                 blindTimeout = setTimeout(() => { document.getElementById("blindOverlay").style.display = "none"; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 3000);
             } else if (type === 'tunnel') {
-                effectDisplay.innerText = "🌀 웜홀 진입! 머리와 꼬리 반전!"; effectDisplay.style.color = "#c084fc";
+                effectDisplay.innerText = "🌀 웜홀 진입! 기수 반전!"; effectDisplay.style.color = "#c084fc";
                 if (snake.length > 1) { const tail = snake[snake.length - 1]; const beforeTail = snake[snake.length - 2]; dx = tail.x - beforeTail.x; dy = tail.y - beforeTail.y; snake.reverse(); } else { dx = -dx; dy = -dy; }
             } else if (type === 'reverse') {
-                effectDisplay.innerText = "☣️ 바이러스 감염! 3초간 조작 반전!"; effectDisplay.style.color = "var(--neon-red)";
+                effectDisplay.innerText = "☣️ 항법장치 해킹! 3초간 조작 반전!"; effectDisplay.style.color = "var(--neon-red)";
                 isReversedControls = true;
                 if(controlTimeout) clearTimeout(controlTimeout);
                 controlTimeout = setTimeout(() => { isReversedControls = false; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 3000);
             } else if (type === 'caterpillar') {
-                if (Math.random() < 0.5) { effectDisplay.innerText = "💪 파워업! 아이템 싹쓸이 모드 (5초)"; effectDisplay.style.color = "var(--neon-blue)"; snakeSizeMod = 1.8; } 
-                else { effectDisplay.innerText = "📉 꼬마 변신! 콩알만해집니다!"; effectDisplay.style.color = "var(--neon-gold)"; snakeSizeMod = 0.5; }
+                if (Math.random() < 0.5) { effectDisplay.innerText = "💪 쉴드 전개! 자석 싹쓸이 모드 (5초)"; effectDisplay.style.color = "var(--neon-blue)"; snakeSizeMod = 1.8; } 
+                else { effectDisplay.innerText = "📉 스텔스 모드! 기체가 작아집니다!"; effectDisplay.style.color = "var(--neon-gold)"; snakeSizeMod = 0.5; }
                 if(sizeTimeout) clearTimeout(sizeTimeout);
                 sizeTimeout = setTimeout(() => { snakeSizeMod = 1; if(!isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 5000);
             } else if (type === 'bonus') {
-                score += 50; effectDisplay.innerText = "💎 보너스 코인 +50점!"; effectDisplay.style.color = "var(--neon-gold)";
+                score += 50; effectDisplay.innerText = "💎 데이터 파편 +50점!"; effectDisplay.style.color = "var(--neon-gold)";
             } else if (type === 'slow') {
                 effectDisplay.innerText = "🐢 냉각수 가동! 속도 저하 (5초)"; effectDisplay.style.color = "var(--neon-blue)";
                 speedMod = 1.6; updateSpeed();
@@ -659,7 +653,7 @@ GAME_HTML = """
             } else if (type === 'penalty') {
                 score = Math.max(0, score - 30); effectDisplay.innerText = "💀 배드섹터! 감점 -30점!"; effectDisplay.style.color = "var(--neon-red)";
             } else if (type === 'super') {
-                score += 100; effectDisplay.innerText = "🚀 잭팟! 슈퍼 보너스 +100점!"; effectDisplay.style.color = "var(--neon-green)";
+                score += 100; effectDisplay.innerText = "🚀 코어 해킹! 슈퍼 보너스 +100점!"; effectDisplay.style.color = "var(--neon-green)";
             }
             updateGameDifficulty(); 
             setTimeout(() => { if(!['slow','fast','blind','reverse','caterpillar'].includes(type) && !isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 2500);
@@ -693,7 +687,7 @@ GAME_HTML = """
             lives--;
             if (lives > 0) {
                 reduceSnakeBody(3);
-                alert(`⚠️ 충돌 발생! 생명력 손실 (현재 목숨: ${lives})`); resetSnakePosition();
+                alert(`⚠️ 충돌 발생! 실드 내구도 손실 (현재 목숨: ${lives})`); resetSnakePosition();
             } else {
                 updateUI(); endGame();
             }
@@ -799,14 +793,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v36)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v37)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v36")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v37")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v36", path=component_dir)
+snake_game = components.declare_component("snake_v37", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -840,8 +834,8 @@ def save_score(nickname, score):
 # -------------------------------------------------------------
 # 🏁 스트림릿 메인 화면 레이아웃
 # -------------------------------------------------------------
-st.title("⚡ 네온 스피드 러시 (Neon Speed Rush) 🎮")
-st.info("🏆 새롭게 업그레이드된 엔진과 세련된 뱀 머리로 스릴을 즐겨보세요!")
+st.title("⚡ 네온 스피드 러시 (Neon Speed Rush) 🚀")
+st.info("🏆 사이버 전투기를 조종하여 빛의 속도를 지배하세요!")
 
 col_empty, col1, col2 = st.columns([0.05, 2.3, 1.65])
 
@@ -863,18 +857,18 @@ with col1:
             st.rerun()
 
 with col2:
-    with st.expander("📖 게임 가이드 보기 (업그레이드 완료)", expanded=True):
+    with st.expander("📖 게임 가이드 보기 (우주 전투기 모드)", expanded=True):
         tab1, tab2, tab3 = st.tabs(["🕹️ 설명", "📦 아이템", "⚠️ 주의사항"])
         
         with tab1:
             st.markdown("""
             * **조작 방법**: 키보드 방향키 (PC) 또는 화면 하단 십자 버튼 (모바일)
-            * **부드러운 엔진 적용!**: 이제 지렁이가 네온 빛을 내며 곡선으로 훨씬 부드럽게 미끄러집니다.
+            * **사이버 전투기!**: 네온 빛의 궤적을 남기며 부드럽게 비행합니다.
             * **일시정지**: 게임 중 위급할 때 **`[P]` 키 또는 온스크린 `[⏸️]` 버튼**을 누르면 일시정지됩니다. (1게임당 **딱 1번만!**)
             * **난이도 상승 (Speed Rush!)**: 
-              * 점수가 **50점** 오를 때마다 속도가 약간씩 상승!
-            * **목숨(하트) 시스템**: 총 **3개(❤️❤️❤️)**의 목숨!
-              * 충돌 시 점수 감점 없이 **몸통만 3칸 줄어든 채** 중앙에서 부활합니다.
+              * 점수가 **50점** 오를 때마다 기체의 속도가 약간씩 상승!
+            * **목숨(실드) 시스템**: 총 **3개(❤️❤️❤️)**의 실드!
+              * 충돌 시 점수 감점 없이 **궤적(꼬리)만 3칸 줄어든 채** 중앙에서 부활합니다.
             * 🌐 **250점 스캐닝 그리드!**: 반투명 격자가 나타나 길을 안내해 줍니다.
             * 🎉 **500점 피버 타임!**: 점수가 500단위에 도달하면 **10초간** ⭐️별 조각이 쏟아집니다.
             """)
@@ -885,26 +879,26 @@ with col2:
             
             | 아이템 | 효과 설명 |
             | :--- | :--- |
-            | 🍀 **데이터 덩어리** | 몸통 **30칸** 달성 시 화면 중앙에 거대한 클로버 밭 출현! |
-            | 💎 **보너스 코인** | 점수 **+50점** 획득 |
-            | 🚀 **잭팟 슈퍼** | 점수 **+100점** 획득 |
+            | 🔋 **메가 코어 팩** | 궤적 **30칸** 달성 시 화면 중앙에 거대한 배터리 팩 출현! |
+            | 💎 **데이터 파편** | 점수 **+50점** 획득 |
+            | 🚀 **코어 해킹** | 점수 **+100점** 획득 |
             | 🐢 **냉각수 가동** | 5초간 속도 **대폭 감소** |
             | ⚡ **오버클럭** | 5초간 속도 **급상승** |
-            | ⚠️ **시야 해킹** | 3초간 눈앞이 캄캄해짐 |
-            | 🌀 **웜홀 진입** | 머리와 꼬리가 뒤바뀌며 **방향 즉시 반전** |
-            | ☣️ **바이러스** | 3초간 **방향키 조작 반대** |
-            | 💪 **파워업** | 5초간 랜덤으로 **아이템 싹쓸이 모드** 또는 꼬마 변신 |
+            | ⚠️ **레이더 재밍** | 3초간 눈앞이 캄캄해짐 (암전) |
+            | 🌀 **웜홀 진입** | 전투기의 기수와 궤적이 뒤바뀌며 **방향 즉시 반전** |
+            | ☣️ **항법장치 해킹** | 3초간 **방향키 조작 반대** |
+            | 💪 **쉴드 전개** | 5초간 랜덤으로 **아이템 싹쓸이 자석 모드** 또는 스텔스(축소) |
             | 💀 **배드섹터** | 점수 **-30점** 감점 |
             """)
             
         with tab3:
             st.markdown("""
             1. **⏳ 10초 에너지 고갈 타이머!**
-               * 10초 안에 먹이를 먹지 못하면 **몸통이 2칸 깎여 나갑니다.** 
-            2. **💪 파워업 싹쓸이 모드**
-               * 파워업 상태일 때는 주변을 스치기만 해도 모든 아이템을 자석처럼 싹쓸이합니다!
+               * 10초 안에 에너지를 획득하지 못하면 기체가 과부하에 걸려 **페널티로 궤적(꼬리)이 4칸 늘어납니다.** (꼬리가 길어질수록 충돌 위험이 상승합니다!)
+            2. **💪 쉴드 전개 자석 모드**
+               * 쉴드 전개 상태일 때는 주변을 스치기만 해도 모든 아이템을 진공청소기처럼 싹쓸이합니다!
             3. **💥 전략적 충돌**
-               * 갇힐 위기라면 벽에 박으세요! 게임오버 대신 **몸통만 3칸 다이어트** 됩니다.
+               * 갇힐 위기라면 벽에 박으세요! 게임오버 대신 **궤적(꼬리)만 3칸 초기화** 되면서 생존할 수 있습니다.
             """)
 
     if "admin_mode" not in st.session_state:
@@ -937,7 +931,7 @@ with col2:
     scores = load_scores()
     
     if not scores:
-        st.write("아직 랭킹에 등록된 기록이 없습니다. 첫 번째 주자가 되어보세요!")
+        st.write("아직 랭킹에 등록된 기록이 없습니다. 첫 번째 에이스 파일럿이 되어보세요!")
     else:
         board_html = "<div style='display: flex; flex-direction: column; gap: 8px;'>"
         for i, s in enumerate(scores):
