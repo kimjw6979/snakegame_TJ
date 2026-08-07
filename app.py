@@ -22,7 +22,7 @@ hide_menu_style = """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# 🎮 [HTML/JS 최신 네온 트렌드 게임 엔진 - 은하철도 에디션]
+# 🎮 [HTML/JS 최신 네온 트렌드 게임 엔진 - 스무스 보간 에디션]
 # -------------------------------------------------------------
 GAME_HTML = """
 <!DOCTYPE html>
@@ -208,6 +208,7 @@ GAME_HTML = """
         let snake, normalFoods, hiddenFruits, particles = [];
         let dx, dy, score, nickname, lives;
         let isCountingDown = false, isGameOver = false, isStarted = false;
+        let countdownText = ""; 
         
         let baseSpeed = 100;
         let speedMod = 1;
@@ -234,10 +235,13 @@ GAME_HTML = """
         const COLOR_NEON_BLUE = "#3b82f6";
 
         function initGame() {
-            snake = [{ x: 300, y: 300 }]; dx = 0; dy = -gridSize;
+            // 논리위치(x,y)와 스무스 렌더링용 이전위치(oldX, oldY) 설정
+            snake = [{ x: 300, y: 300, oldX: 300, oldY: 300, lastAngle: -Math.PI / 2 }]; 
+            dx = 0; dy = -gridSize;
             score = 0; lives = 3; isGameOver = false; particles = [];
             baseSpeed = 100; speedMod = 1; isReversedControls = false; snakeSizeMod = 1;
             changingDirection = false;
+            countdownText = "";
             
             startHungerTimer();
             
@@ -257,8 +261,6 @@ GAME_HTML = """
             
             normalFoods = [generateValidPosition()];
             hiddenFruits = [];
-            
-            renderFrame(false); 
         }
 
         function updateUI() {
@@ -286,15 +288,20 @@ GAME_HTML = """
         function startGameSequence() { 
             initGame(); 
             isCountingDown = true;
+            lastRenderTime = performance.now();
+            accumulator = 0;
+            requestAnimationFrame(gameLoop); // 즉시 렌더링 루프 시작!
+            
             let count = 3; 
             let countInterval = setInterval(() => {
-                drawScreenWithText(count > 0 ? count : "발차!");
+                countdownText = count > 0 ? count.toString() : "발차!";
                 count--;
                 if (count < -1) {
-                    clearInterval(countInterval); isCountingDown = false;
+                    clearInterval(countInterval); 
+                    isCountingDown = false;
+                    countdownText = "";
                     lastRenderTime = performance.now();
                     accumulator = 0;
-                    requestAnimationFrame(gameLoop); 
                 }
             }, 800);
         }
@@ -310,7 +317,8 @@ GAME_HTML = """
                     // 타이머 종료 시 객차 4칸 연장 페널티
                     for(let i=0; i<4; i++) {
                         let tail = snake[snake.length-1];
-                        snake.push({x: tail.x, y: tail.y});
+                        // 스무스 이동을 위해 oldX, oldY 도 복사
+                        snake.push({x: tail.x, y: tail.y, oldX: tail.x, oldY: tail.y, lastAngle: tail.lastAngle});
                     }
                     
                     const effectDisplay = document.getElementById("itemEffect");
@@ -360,16 +368,6 @@ GAME_HTML = """
             requestAnimationFrame(gameLoop);
         }
 
-        function drawScreenWithText(text) {
-            clearCanvas(); renderFrame(true);
-            ctx.fillStyle = "rgba(2, 6, 23, 0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = COLOR_NEON_GOLD; ctx.font = "bold 60px 'Pretendard'";
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.shadowBlur = 20; ctx.shadowColor = COLOR_NEON_GOLD;
-            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-            ctx.shadowBlur = 0;
-        }
-
         function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
         function drawGrid() {
@@ -404,9 +402,35 @@ GAME_HTML = """
             drawNormalFoods(); 
             drawHiddenFruits(); 
             drawBonusFoods(); 
+            
+            // 스무스 LERP 값 계산
+            let lerp = (isCountingDown || isPaused) ? 1.0 : Math.min(1.0, accumulator / currentTickRate);
+            
+            drawTrainPath(lerp); 
             updateAndDrawParticles(); 
             
-            drawTrainPath(); 
+            // 카운트다운/일시정지 문구 렌더링
+            if (countdownText) {
+                ctx.fillStyle = "rgba(2, 6, 23, 0.6)"; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                let isPause = countdownText.includes("일시정지");
+                ctx.fillStyle = COLOR_NEON_GOLD; 
+                ctx.font = isPause ? "bold 50px 'Pretendard'" : "bold 60px 'Pretendard'";
+                ctx.textAlign = "center"; 
+                ctx.textBaseline = "middle";
+                ctx.shadowBlur = 20; 
+                ctx.shadowColor = COLOR_NEON_GOLD;
+                ctx.fillText(countdownText, canvas.width / 2, canvas.height / 2 - (isPause ? 20 : 0));
+                
+                if (isPause) {
+                    ctx.fillStyle = "#94a3b8"; 
+                    ctx.font = "20px 'Pretendard'";
+                    ctx.shadowBlur = 0;
+                    ctx.fillText("(운행당 1번만 사용 가능!)", canvas.width / 2, canvas.height / 2 + 30);
+                }
+                ctx.shadowBlur = 0;
+            }
         }
 
         function createParticles(x, y, color) {
@@ -422,7 +446,7 @@ GAME_HTML = """
         function updateAndDrawParticles() {
             for(let i = particles.length -1; i >= 0; i--) {
                 let p = particles[i];
-                if(isPaused) { } else { p.x += p.vx; p.y += p.vy; p.life -= 0.05; }
+                if(!isPaused && !isCountingDown) { p.x += p.vx; p.y += p.vy; p.life -= 0.05; }
                 if(p.life <= 0) { particles.splice(i, 1); continue; }
                 ctx.globalAlpha = p.life;
                 ctx.fillStyle = p.color;
@@ -432,22 +456,38 @@ GAME_HTML = """
             }
         }
 
-        // --- 🚂 은하철도 999 렌더링 ---
-        function drawTrainPath() {
+        // --- 🚂 은하철도 999 스무스 렌더링 ---
+        function drawTrainPath(lerp) {
             if (snake.length === 0) return;
             
             let strokeColor = isReversedControls ? COLOR_NEON_RED : COLOR_NEON_BLUE;
             let w = Math.max(4, (gridSize - 4) * snakeSizeMod);
 
+            // 보간된 시각적 좌표 생성
+            let vSnake = snake.map(part => {
+                return {
+                    x: part.oldX !== undefined ? part.oldX + (part.x - part.oldX) * lerp : part.x,
+                    y: part.oldY !== undefined ? part.oldY + (part.y - part.oldY) * lerp : part.y,
+                    origPart: part
+                };
+            });
+
             // 1. 객차(꼬리) 그리기
-            for (let i = snake.length - 1; i >= 1; i--) {
-                let part = snake[i];
-                let prev = snake[i-1];
+            for (let i = vSnake.length - 1; i >= 1; i--) {
+                let part = vSnake[i];
+                let prev = vSnake[i-1];
                 
                 ctx.save();
                 ctx.translate(part.x + gridSize/2, part.y + gridSize/2);
                 
-                let angle = Math.atan2(prev.y - part.y, prev.x - part.x);
+                let dY = prev.y - part.y;
+                let dX = prev.x - part.x;
+                let angle = part.origPart.lastAngle || 0;
+                // 완전히 겹쳐있지 않으면 각도 업데이트
+                if (Math.abs(dX) > 0.01 || Math.abs(dY) > 0.01) {
+                    angle = Math.atan2(dY, dX);
+                    part.origPart.lastAngle = angle; 
+                }
                 ctx.rotate(angle);
                 
                 // 연결고리
@@ -479,12 +519,13 @@ GAME_HTML = """
             }
             
             // 2. 증기기관차 (머리) 그리기
-            let headX = snake[0].x + gridSize/2;
-            let headY = snake[0].y + gridSize/2;
+            let headX = vSnake[0].x + gridSize/2;
+            let headY = vSnake[0].y + gridSize/2;
 
             ctx.save();
             ctx.translate(headX, headY);
 
+            // 헤드의 각도는 사용자 조작에 즉시 반응
             let headAngle = 0;
             if (dx > 0) headAngle = 0;                  // 오른쪽
             else if (dx < 0) headAngle = Math.PI;       // 왼쪽
@@ -542,7 +583,8 @@ GAME_HTML = """
             ctx.fill();
             ctx.globalAlpha = 1.0;
 
-            if (!isPaused && !isGameOver && Math.random() < 0.3) {
+            // 스무스 좌표계에서 파티클(연기) 생성
+            if (!isPaused && !isCountingDown && !isGameOver && Math.random() < 0.3) {
                 particles.push({
                     x: headX, 
                     y: headY,
@@ -568,35 +610,29 @@ GAME_HTML = """
                 let fy = food.y;
                 
                 ctx.beginPath();
-                // 세로 레일 2개
                 ctx.moveTo(fx + 6, fy + 3); ctx.lineTo(fx + 6, fy + 17);
                 ctx.moveTo(fx + 14, fy + 3); ctx.lineTo(fx + 14, fy + 17);
-                
-                // 가로 침목 3개
                 ctx.moveTo(fx + 4, fy + 6); ctx.lineTo(fx + 16, fy + 6);
                 ctx.moveTo(fx + 4, fy + 10); ctx.lineTo(fx + 16, fy + 10);
                 ctx.moveTo(fx + 4, fy + 14); ctx.lineTo(fx + 16, fy + 14);
-                
                 ctx.stroke();
             });
             ctx.shadowBlur = 0;
         }
         
-        // --- 🎁 [수정됨] 눈에 확 띄는 밝은 네온 물음표 상자 렌더링 ---
+        // --- 🎁 눈에 확 띄는 밝은 네온 물음표 상자 렌더링 ---
         function drawHiddenFruits() {
             hiddenFruits.forEach(fruit => {
                 let fx = fruit.x;
                 let fy = fruit.y;
                 
-                // 펄스 애니메이션 (시간에 따라 빛이 커졌다 작아짐)
                 let time = performance.now() / 200; 
                 let glow = 15 + Math.sin(time) * 5;
                 
-                // 빛나는 핑크색 박스 배경
                 ctx.shadowBlur = glow;
-                ctx.shadowColor = "#f472b6"; // 밝은 핑크 네온
+                ctx.shadowColor = "#f472b6"; 
                 ctx.fillStyle = "rgba(244, 114, 182, 0.4)";
-                ctx.strokeStyle = "#fbcfe8"; // 밝은 테두리
+                ctx.strokeStyle = "#fbcfe8"; 
                 ctx.lineWidth = 2;
                 
                 ctx.beginPath();
@@ -604,9 +640,8 @@ GAME_HTML = """
                 ctx.fill();
                 ctx.stroke();
                 
-                // 박스 안의 물음표 텍스트
-                ctx.shadowBlur = 0; // 글씨는 번지지 않게 리셋
-                ctx.fillStyle = "#ffffff"; // 흰색 글씨
+                ctx.shadowBlur = 0; 
+                ctx.fillStyle = "#ffffff"; 
                 ctx.font = "bold 14px Arial";
                 ctx.textAlign = "center"; 
                 ctx.textBaseline = "middle";
@@ -645,7 +680,19 @@ GAME_HTML = """
         }
         
         function advanceSnake() { 
-            let head = { x: snake[0].x + dx, y: snake[0].y + dy }; 
+            // 이동 전 현재 위치를 oldX, oldY에 저장
+            snake.forEach(part => {
+                part.oldX = part.x;
+                part.oldY = part.y;
+            });
+
+            let head = { 
+                x: snake[0].x + dx, 
+                y: snake[0].y + dy, 
+                oldX: snake[0].x, 
+                oldY: snake[0].y, 
+                lastAngle: snake[0].lastAngle 
+            }; 
             snake.unshift(head); 
             
             let hitRange = (snakeSizeMod > 1.2) ? gridSize : 0;
@@ -697,7 +744,6 @@ GAME_HTML = """
                     score += 10; normalFoods.splice(i, 1); updateGameDifficulty(); resetHungerTimer();
                     if (hiddenFruits.length < 3 && Math.random() < 0.4) spawnHiddenFruit();
                     ateSomething = true;
-                    // 선로 습득 시 푸른 파티클 생성
                     createParticles(f.x, f.y, COLOR_NEON_BLUE);
                 }
             }
@@ -790,11 +836,32 @@ GAME_HTML = """
             return false; 
         }
 
+        // [버그수정] 리스폰 중 발생하던 로직 충돌 및 카운트다운 개선
         function handleDeath() {
             lives--;
             if (lives > 0) {
                 reduceSnakeBody(3);
-                alert(`⚠️ 소행성 충돌! 장갑 내구도 감소 (현재 남은 장갑: ${lives})`); resetSnakePosition();
+                isCountingDown = true; 
+                if(hungerInterval) clearInterval(hungerInterval);
+                
+                countdownText = "💥 장갑 손상! 비상 복구중...";
+                
+                setTimeout(() => {
+                    resetSnakePosition(); // 꼬이지 않게 일자로 재배치
+                    let count = 3;
+                    let countInterval = setInterval(() => {
+                        countdownText = count > 0 ? count.toString() : "재발차!";
+                        count--;
+                        if (count < -1) {
+                            clearInterval(countInterval); 
+                            isCountingDown = false;
+                            countdownText = "";
+                            lastRenderTime = performance.now();
+                            accumulator = 0;
+                            startHungerTimer();
+                        }
+                    }, 800);
+                }, 1500);
             } else {
                 updateUI(); endGame();
             }
@@ -804,8 +871,8 @@ GAME_HTML = """
             if (snake.length > count) { snake = snake.slice(0, snake.length - count); } else { snake = [snake[0]]; }
         }
 
+        // [버그수정] 자기 꼬리를 다시 물지 않도록 일자로 세팅
         function resetSnakePosition() {
-            if(hungerInterval) clearInterval(hungerInterval);
             document.getElementById("blindOverlay").style.display = "none";
             isReversedControls = false; snakeSizeMod = 1;
             if(sizeTimeout) clearTimeout(sizeTimeout);
@@ -816,12 +883,21 @@ GAME_HTML = """
             isGiantCloverActive = false; giantCloverBlocks = [];
             if(cloverTimeout) clearTimeout(cloverTimeout);
             
-            updateUI();
-            const headDiffX = 300 - snake[0].x; const headDiffY = 300 - snake[0].y;
-            snake.forEach(part => { part.x += headDiffX; part.y += headDiffY; });
+            let len = snake.length;
+            snake = [];
+            // 중앙부터 아래로 일자로 배치시켜 부활 시 자폭 방지
+            for(let i=0; i<len; i++) {
+                snake.push({
+                    x: 300, 
+                    y: 300 + i*gridSize, 
+                    oldX: 300, 
+                    oldY: 300 + i*gridSize,
+                    lastAngle: -Math.PI / 2
+                });
+            }
             dx = 0; dy = -gridSize;
             
-            setTimeout(() => { if(!isGameOver && !isPaused) { startHungerTimer(); } }, 1000);
+            updateUI();
         }
 
         function endGame() {
@@ -831,6 +907,7 @@ GAME_HTML = """
             if(gridTimeout) clearTimeout(gridTimeout);
             
             isGameOver = true; isStarted = false;
+            countdownText = "";
             
             document.getElementById("blindOverlay").style.display = "none";
             document.getElementById("restartContainer").style.display = "flex";
@@ -865,13 +942,10 @@ GAME_HTML = """
             if (!isPaused && !pauseUsed) {
                 isPaused = true; pauseUsed = true; 
                 if (hungerInterval) clearInterval(hungerInterval);
-                ctx.fillStyle = "rgba(2, 6, 23, 0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = COLOR_NEON_GOLD; ctx.font = "bold 50px 'Pretendard'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillText("⏸️ 운행 일시정지", canvas.width / 2, canvas.height / 2 - 20);
-                ctx.fillStyle = "#94a3b8"; ctx.font = "20px 'Pretendard'";
-                ctx.fillText("(운행당 1번만 사용 가능!)", canvas.width / 2, canvas.height / 2 + 30);
+                countdownText = "⏸️ 일시정지";
             } else if (isPaused) {
                 isPaused = false;
+                countdownText = "";
                 lastRenderTime = performance.now();
                 resumeHungerTimer();
             }
@@ -900,14 +974,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v40)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v41)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v40")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v41")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v40", path=component_dir)
+snake_game = components.declare_component("snake_v41", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -975,14 +1049,14 @@ with col2:
             * **하이퍼 스피드!**: 
               * 승객을 **50명(점수)** 태울 때마다 열차 속도가 서서히 빨라집니다!
             * **장갑(목숨) 시스템**: 총 **3겹(🛡️🛡️🛡️)**의 열차 장갑!
-              * 소행성과 충돌 시 게임오버 대신 **객차(꼬리)만 3칸 터져나가며** 중앙에서 부활합니다.
+              * 소행성과 충돌 시 게임오버 대신 **객차(꼬리)만 3칸 터져나가며** 3초 대기 후 부활합니다.
             * 🌐 **250명 달성 스캐닝 그리드!**: 반투명 우주 궤도(격자)가 10초간 나타나 길을 안내합니다.
             * 🎉 **500명 달성 유성우!**: 점수가 500단위에 도달하면 **10초간** ⭐️별 조각이 무더기로 쏟아집니다.
             """)
             
         with tab2:
             st.markdown("""
-            **미스터리 수화물(핑크색 네온 [?] 상자)** 안에는 아래 이벤트가 숨겨져 있습니다. 
+            **미스터리 수화물(빛나는 핑크색 [?] 상자)** 안에는 아래 이벤트가 숨겨져 있습니다. 
             
             | 아이템 | 효과 설명 |
             | :--- | :--- |
@@ -1027,28 +1101,4 @@ with col2:
                 st.success("✅ 인증 완료!")
                 if st.button("🚨 랭킹 데이터 전체 초기화"):
                     if os.path.exists(SCORE_FILE):
-                        os.remove(SCORE_FILE)
-                        st.success("삭제되었습니다.")
-                        time.sleep(1)
-                        st.rerun()
-            elif admin_password != "":
-                st.error("❌ 비밀번호 오류")
-            st.markdown("---")
-
-    scores = load_scores()
-    
-    if not scores:
-        st.write("아직 랭킹에 등록된 운행 기록이 없습니다. 첫 번째 전설의 차장이 되어보세요!")
-    else:
-        board_html = "<div style='display: flex; flex-direction: column; gap: 8px;'>"
-        for i, s in enumerate(scores):
-            medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}위"
-            date_str = f" <span style='font-size: 12px; font-weight: normal; color: #888;'>👑 (운행일: {s.get('date', '알수없음')})</span>" if i == 0 and "date" in s else ""
-            
-            board_html += "<div style='border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 8px;'>"
-            board_html += f"<div style='font-weight: bold; font-size: 16px; margin-bottom: 2px;'>{medal} | {s['nickname']}{date_str}</div>"
-            board_html += f"<div style='font-size: 13px; color: gray;'>탑승객: {s['score']} 명</div>"
-            board_html += "</div>"
-            
-        board_html += "</div>"
-        st.markdown(board_html, unsafe_allow_html=True)
+                        os.remove
