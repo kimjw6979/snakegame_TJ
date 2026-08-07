@@ -228,6 +228,12 @@ GAME_HTML = """
         let accumulator = 0;
         let currentTickRate = 100;
 
+        // JS Canvas 내부에서는 CSS 변수(var) 인식이 안되므로 헥스코드 직접 지정
+        const COLOR_NEON_GREEN = "#10b981";
+        const COLOR_NEON_RED = "#f43f5e";
+        const COLOR_NEON_GOLD = "#fbbf24";
+        const COLOR_NEON_BLUE = "#3b82f6";
+
         function initGame() {
             snake = [{ x: 300, y: 300 }]; dx = 0; dy = -gridSize;
             score = 0; lives = 3; isGameOver = false; particles = [];
@@ -252,6 +258,9 @@ GAME_HTML = """
             
             normalFoods = [generateValidPosition()];
             hiddenFruits = [];
+            
+            // 화면이 검게 나오는 것을 방지하기 위해 초기 세팅 후 1프레임 렌더링!
+            renderFrame(false); 
         }
 
         function updateUI() {
@@ -303,7 +312,7 @@ GAME_HTML = """
                     reduceSnakeBody(2);
                     const effectDisplay = document.getElementById("itemEffect");
                     effectDisplay.innerText = "⚠️ SYSTEM WARNING: 에너지 고갈! 몸통 감소!"; 
-                    effectDisplay.style.color = "var(--neon-red)";
+                    effectDisplay.style.color = "var(--neon-red)"; // DOM은 CSS변수 가능
                     setTimeout(() => { if(effectDisplay.innerText.includes("에너지") && !isBonusTime && !isGridTime && !isGiantCloverActive) effectDisplay.innerText = ""; }, 2000);
                     hungerTimer = 10;
                     document.getElementById("foodTimerDisplay").innerText = hungerTimer;
@@ -350,9 +359,9 @@ GAME_HTML = """
         function drawScreenWithText(text) {
             clearCanvas(); renderFrame(true);
             ctx.fillStyle = "rgba(11, 17, 32, 0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "var(--neon-green)"; ctx.font = "bold 60px 'Pretendard'";
+            ctx.fillStyle = COLOR_NEON_GREEN; ctx.font = "bold 60px 'Pretendard'";
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.shadowBlur = 20; ctx.shadowColor = "var(--neon-green)";
+            ctx.shadowBlur = 20; ctx.shadowColor = COLOR_NEON_GREEN;
             ctx.fillText(text, canvas.width / 2, canvas.height / 2);
             ctx.shadowBlur = 0;
         }
@@ -387,7 +396,7 @@ GAME_HTML = """
             drawHiddenFruits(); 
             drawBonusFoods(); 
             updateAndDrawParticles(); 
-            drawSnakePath(); // 디테일이 추가된 뱀 머리 호출
+            drawSnakePath();
         }
 
         function createParticles(x, y, color) {
@@ -413,11 +422,10 @@ GAME_HTML = """
             }
         }
 
-        // --- 🐍 [NEW] 네온 뱀 머리 퀄리티 업그레이드 ---
         function drawSnakePath() {
             if (snake.length === 0) return;
             
-            let strokeColor = isReversedControls ? "var(--neon-red)" : "var(--neon-green)";
+            let strokeColor = isReversedControls ? COLOR_NEON_RED : COLOR_NEON_GREEN;
             let w = Math.max(4, (gridSize - 4) * snakeSizeMod);
 
             // 1. 몸통 그리기
@@ -479,10 +487,10 @@ GAME_HTML = """
             ctx.fillRect(w * 0.15, w * 0.15, w * 0.05, w * 0.2);  // 오른쪽 동공
 
             // 갈라지며 낼름거리는 붉은 혀
-            ctx.strokeStyle = "var(--neon-red)";
+            ctx.strokeStyle = COLOR_NEON_RED;
             ctx.lineWidth = 1.5;
             ctx.shadowBlur = 5;
-            ctx.shadowColor = "var(--neon-red)";
+            ctx.shadowColor = COLOR_NEON_RED;
             
             ctx.beginPath();
             ctx.moveTo(w * 0.7, 0);         // 입에서 출발
@@ -496,8 +504,8 @@ GAME_HTML = """
         }
 
         function drawNormalFoods() { 
-            ctx.fillStyle = "var(--neon-red)"; 
-            ctx.shadowBlur = 15; ctx.shadowColor = "var(--neon-red)";
+            ctx.fillStyle = COLOR_NEON_RED; 
+            ctx.shadowBlur = 15; ctx.shadowColor = COLOR_NEON_RED;
             normalFoods.forEach(food => {
                 ctx.beginPath(); ctx.arc(food.x + gridSize/2, food.y + gridSize/2, gridSize/2 - 2, 0, Math.PI*2); ctx.fill();
             });
@@ -568,7 +576,7 @@ GAME_HTML = """
                     let f = giantCloverBlocks[i];
                     if (Math.abs(f.x - head.x) <= hitRange && Math.abs(f.y - head.y) <= hitRange) {
                         score += 10; giantCloverBlocks.splice(i, 1); updateGameDifficulty(); resetHungerTimer(); ateSomething = true;
-                        createParticles(f.x, f.y, "var(--neon-green)");
+                        createParticles(f.x, f.y, COLOR_NEON_GREEN);
                     }
                 }
             }
@@ -578,7 +586,7 @@ GAME_HTML = """
                     let f = bonusFoods[i];
                     if (Math.abs(f.x - head.x) <= hitRange && Math.abs(f.y - head.y) <= hitRange) {
                         score += 10; bonusFoods.splice(i, 1); updateGameDifficulty(); resetHungerTimer(); ateSomething = true;
-                        createParticles(f.x, f.y, "var(--neon-gold)");
+                        createParticles(f.x, f.y, COLOR_NEON_GOLD);
                     }
                 }
             }
@@ -589,7 +597,7 @@ GAME_HTML = """
                     score += 10; normalFoods.splice(i, 1); updateGameDifficulty(); resetHungerTimer();
                     if (hiddenFruits.length < 3 && Math.random() < 0.4) spawnHiddenFruit();
                     ateSomething = true;
-                    createParticles(f.x, f.y, "var(--neon-red)");
+                    createParticles(f.x, f.y, COLOR_NEON_RED);
                 }
             }
             
@@ -728,9 +736,9 @@ GAME_HTML = """
             
             renderFrame(false); 
             ctx.fillStyle = "rgba(11, 17, 32, 0.8)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "var(--neon-red)"; ctx.font = "bold 50px 'Pretendard'";
+            ctx.fillStyle = COLOR_NEON_RED; ctx.font = "bold 50px 'Pretendard'";
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.shadowBlur = 15; ctx.shadowColor = "var(--neon-red)";
+            ctx.shadowBlur = 15; ctx.shadowColor = COLOR_NEON_RED;
             ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
             ctx.fillStyle = "white"; ctx.font = "24px 'Pretendard'"; ctx.shadowBlur = 0;
             ctx.fillText(`SCORE : ${score}`, canvas.width / 2, canvas.height / 2 + 30);
@@ -757,7 +765,7 @@ GAME_HTML = """
                 isPaused = true; pauseUsed = true; 
                 if (hungerInterval) clearInterval(hungerInterval);
                 ctx.fillStyle = "rgba(11, 17, 32, 0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "var(--neon-gold)"; ctx.font = "bold 50px 'Pretendard'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillStyle = COLOR_NEON_GOLD; ctx.font = "bold 50px 'Pretendard'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
                 ctx.fillText("⏸️ PAUSE", canvas.width / 2, canvas.height / 2 - 20);
                 ctx.fillStyle = "#94a3b8"; ctx.font = "20px 'Pretendard'";
                 ctx.fillText("(게임당 1번만 사용 가능!)", canvas.width / 2, canvas.height / 2 + 30);
@@ -791,14 +799,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v35)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v36)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v35")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v36")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v35", path=component_dir)
+snake_game = components.declare_component("snake_v36", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
