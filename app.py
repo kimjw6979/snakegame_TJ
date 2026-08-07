@@ -556,7 +556,7 @@ GAME_HTML = """
             ctx.restore(); 
         }
 
-        // --- 🛤️ [NEW] 빛의 선로(기찻길) 렌더링 ---
+        // --- 🛤️ 선로(기찻길) 렌더링 ---
         function drawNormalFoods() { 
             ctx.strokeStyle = "rgba(255, 255, 255, 0.9)"; // 밝은 빛깔
             ctx.lineWidth = 1.5;
@@ -582,10 +582,35 @@ GAME_HTML = """
             ctx.shadowBlur = 0;
         }
         
+        // --- 🎁 [수정됨] 눈에 확 띄는 밝은 네온 물음표 상자 렌더링 ---
         function drawHiddenFruits() {
-            ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
             hiddenFruits.forEach(fruit => {
-                ctx.fillText("📦", fruit.x + (gridSize / 2), fruit.y + (gridSize / 2) + 2); 
+                let fx = fruit.x;
+                let fy = fruit.y;
+                
+                // 펄스 애니메이션 (시간에 따라 빛이 커졌다 작아짐)
+                let time = performance.now() / 200; 
+                let glow = 15 + Math.sin(time) * 5;
+                
+                // 빛나는 핑크색 박스 배경
+                ctx.shadowBlur = glow;
+                ctx.shadowColor = "#f472b6"; // 밝은 핑크 네온
+                ctx.fillStyle = "rgba(244, 114, 182, 0.4)";
+                ctx.strokeStyle = "#fbcfe8"; // 밝은 테두리
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                ctx.rect(fx + 2, fy + 2, gridSize - 4, gridSize - 4);
+                ctx.fill();
+                ctx.stroke();
+                
+                // 박스 안의 물음표 텍스트
+                ctx.shadowBlur = 0; // 글씨는 번지지 않게 리셋
+                ctx.fillStyle = "#ffffff"; // 흰색 글씨
+                ctx.font = "bold 14px Arial";
+                ctx.textAlign = "center"; 
+                ctx.textBaseline = "middle";
+                ctx.fillText("?", fx + gridSize/2, fy + gridSize/2 + 1);
             });
         }
 
@@ -610,8 +635,13 @@ GAME_HTML = """
         
         function drawBonusFoods() {
             if (!isBonusTime) return;
-            ctx.font = "18px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            bonusFoods.forEach(food => { ctx.fillText("⭐️", food.x + (gridSize / 2), food.y + (gridSize / 2) + 2); });
+            ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = COLOR_NEON_GOLD;
+            bonusFoods.forEach(food => { 
+                ctx.fillText("⭐️", food.x + (gridSize / 2), food.y + (gridSize / 2) + 2); 
+            });
+            ctx.shadowBlur = 0;
         }
         
         function advanceSnake() { 
@@ -870,14 +900,14 @@ GAME_HTML = """
 """
 
 # -------------------------------------------------------------
-# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v39)
+# 파일 폴더 생성 및 컴포넌트 선언 (캐시 방지 v40)
 # -------------------------------------------------------------
-component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v39")
+component_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snake_v40")
 os.makedirs(component_dir, exist_ok=True)
 with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
     f.write(GAME_HTML)
 
-snake_game = components.declare_component("snake_v39", path=component_dir)
+snake_game = components.declare_component("snake_v40", path=component_dir)
 
 # -------------------------------------------------------------
 # 랭킹 시스템 및 파일 관리
@@ -952,7 +982,7 @@ with col2:
             
         with tab2:
             st.markdown("""
-            **미스터리 수화물(📦)** 안에는 아래 이벤트가 숨겨져 있습니다. 
+            **미스터리 수화물(핑크색 네온 [?] 상자)** 안에는 아래 이벤트가 숨겨져 있습니다. 
             
             | 아이템 | 효과 설명 |
             | :--- | :--- |
